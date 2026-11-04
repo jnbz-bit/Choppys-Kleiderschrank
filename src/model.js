@@ -1,13 +1,13 @@
 // Kategorien, Zonen am Körper und Platzierung der Kleidungsstücke auf dem Foto.
 
 export const CATEGORIES = [
-  { id: 'oberteil', label: 'Oberteile', one: 'Oberteil', zone: 'oben' },
-  { id: 'jacke', label: 'Jacken', one: 'Jacke', zone: 'oben' },
-  { id: 'kleid', label: 'Kleider', one: 'Kleid', zone: 'oben' },
-  { id: 'hose', label: 'Hosen & Röcke', one: 'Hose / Rock', zone: 'mitte' },
-  { id: 'socken', label: 'Socken', one: 'Socken', zone: 'unten' },
-  { id: 'schuhe', label: 'Schuhe', one: 'Schuhe', zone: 'unten' },
-  { id: 'schmuck', label: 'Schmuck', one: 'Schmuck', zone: 'oben' }
+  { id: 'oberteil', label: 'Oberteile', one: 'Oberteil', noun: 'Oberteil', zone: 'oben' },
+  { id: 'jacke', label: 'Jacken', one: 'Jacke', noun: 'Jacke', zone: 'oben' },
+  { id: 'kleid', label: 'Kleider', one: 'Kleid', noun: 'Kleid', zone: 'oben' },
+  { id: 'hose', label: 'Hosen & Röcke', one: 'Hose / Rock', noun: 'Hose', zone: 'mitte' },
+  { id: 'socken', label: 'Socken', one: 'Socken', noun: 'Socken', zone: 'unten' },
+  { id: 'schuhe', label: 'Schuhe', one: 'Schuhe', noun: 'Schuhe', zone: 'unten' },
+  { id: 'schmuck', label: 'Schmuck', one: 'Schmuck', noun: 'Schmuck', zone: 'oben' }
 ];
 export const CAT = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
 

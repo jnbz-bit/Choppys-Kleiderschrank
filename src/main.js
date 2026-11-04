@@ -10,6 +10,7 @@ import {
 } from './imaging.js';
 import { CATEGORIES, CAT, LAYER_ORDER, ZONE_DEFAULT, METALS, WEEKDAYS, todayIndex, placeItem, zoneBox, zoneAt, uid } from './model.js';
 import { SILHOUETTE } from './silhouette.js';
+import { layerFor, composeOutfit as composeImage, forgetItem } from './render.js';
 import { I } from './icons.js';
 
 registerSW({ immediate: true });
@@ -61,11 +62,23 @@ function toast(text) {
   setTimeout(() => t.remove(), 2200);
 }
 
+function toastAction(text, label, fn) {
+  document.querySelector('.toast')?.remove();
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.setAttribute('role', 'status');
+  t.innerHTML = `<span>${esc(text)}</span><button type="button">${esc(label)}</button>`;
+  t.querySelector('button').addEventListener('click', () => { t.remove(); fn(); });
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4500);
+}
+
 // ---------- Rendering ----------
 function render() {
   const views = { spiegel: viewMirror, schrank: viewCloset, outfits: viewOutfits };
   app.innerHTML = views[S.tab]() + tabsHtml();
   if (S.tab === 'spiegel') mountStage();
+  if (S.tab === 'outfits') refreshStaleThumbs();
 }
 
 function tabsHtml() {
@@ -75,27 +88,43 @@ function tabsHtml() {
 }
 
 // ---------- Spiegel ----------
+const warpOn = () => S.settings.warp !== false;
+const dateKey = () => new Date().toISOString().slice(0, 10);
+const sameSel = (a, b) => LAYER_ORDER.every((c) => (a[c] || null) === (b[c] || null));
+const hasOutfit = () => LAYER_ORDER.some((c) => S.sel[c] && itemById(S.sel[c]));
+
+function plannedToday() {
+  const t = todayIndex();
+  return S.outfits.filter((o) => (o.days || []).includes(t)).sort(byNewest);
+}
+
 function viewMirror() {
   const d = new Date();
   const weekday = d.toLocaleDateString('de-DE', { weekday: 'long' });
   const date = d.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' });
-  const hasSel = LAYER_ORDER.some((c) => S.sel[c] && itemById(S.sel[c]));
   let banner = '';
+  const today = plannedToday();
   if (!S.body) {
     banner = `<div class="banner"><span><b>Dein Foto fehlt noch.</b> Mit einem Ganzkörperfoto siehst du die Outfits an dir statt an der Figur.</span><button data-act="body-setup">Hinzufügen</button></div>`;
+  } else if (today.length && !today.some((o) => sameSel(o.sel, S.sel)) && S.settings.todayDismissed !== dateKey()) {
+    const o = today[0];
+    banner = `<div class="banner"><span><b>Für heute geplant:</b> ${esc(o.name)}</span><button data-act="outfit-wear" data-id="${o.id}">Anziehen</button><button data-act="today-dismiss" aria-label="Hinweis ausblenden">${I.close}</button></div>`;
   } else if (!isStandalone() && !S.settings.hideInstall) {
-    banner = `<div class="banner"><span><b>Als App speichern:</b> Teilen-Symbol, dann „Zum Home-Bildschirm“. So bleibt alles dauerhaft auf dem iPhone.</span><button data-act="hide-install" aria-label="Hinweis schließen">OK</button></div>`;
+    banner = `<div class="banner"><span><b>Als App speichern:</b> Teilen-Symbol, dann „Zum Home-Bildschirm“. So bleibt alles dauerhaft auf dem iPhone.</span><button data-act="hide-install">OK</button></div>`;
   }
+  const many = S.items.length > 1;
   return `<section class="view">
     <header class="head">
       <h1>${esc(weekday)}<span class="sub">${esc(date)}</span></h1>
-      <button class="icon-btn" data-act="clear-outfit" aria-label="Outfit leeren" ${hasSel ? '' : 'disabled'}>${I.reset}</button>
       <button class="icon-btn" data-act="settings" aria-label="Einstellungen">${I.gear}</button>
-      <button class="btn ink" data-act="save-outfit" ${hasSel ? '' : 'disabled'}>${I.save}Speichern</button>
+      <button class="btn ink" data-act="save-outfit" ${hasOutfit() ? '' : 'disabled'}>${I.save}Speichern</button>
     </header>
     ${banner}
-    <div class="stage-wrap"><div class="stage" id="stage"></div>
-      ${!S.settings.swiped && S.items.length ? '<div class="hint-swipe">Auf dem Körper nach links oder rechts wischen</div>' : ''}
+    <div class="stage-wrap"><div class="stage ${S.adjusting ? 'adjusting' : ''}" id="stage"></div>
+      ${S.adjusting ? '' : `<div class="stage-tools">
+        <button class="icon-btn" data-act="shuffle" aria-label="Zufälliges Outfit" ${many ? '' : 'disabled'}>${I.shuffle}</button>
+        <button class="icon-btn" data-act="clear-outfit" aria-label="Outfit leeren" ${hasOutfit() ? '' : 'disabled'}>${I.reset}</button>
+      </div>`}
     </div>
     ${S.adjusting ? adjustBarHtml() : pickerHtml()}
   </section>`;
@@ -122,11 +151,13 @@ function pickerHtml() {
     strip = `<div class="strip" id="strip">
       <button class="thumb none" data-act="pick" data-id="" aria-pressed="${!cur}">Ohne</button>
       ${list.map((i) => `<button class="thumb" data-act="pick" data-id="${i.id}" aria-pressed="${cur === i.id}" aria-label="${esc(i.name)}">
-        <img src="${urls.get(i.id) || ''}" alt="">${i.cat === 'schmuck' && i.metal ? `<span class="metal metal-${i.metal}"></span>` : ''}</button>`).join('')}
+        <img src="${urls.get(i.id) || ''}" alt="" loading="lazy">${i.cat === 'schmuck' && i.metal ? `<span class="metal metal-${i.metal}"></span>` : ''}</button>`).join('')}
     </div>
     ${cur ? `<button class="icon-btn" data-act="adjust" aria-label="Sitz anpassen">${I.move}</button>` : ''}`;
   }
+  const hint = !S.settings.swiped && S.items.length > 1 ? '<p class="hint">Tipp: Auf Oberkörper, Beinen oder Füßen nach links oder rechts wischen.</p>' : '';
   return `<div class="picker">
+    ${hint}
     <div class="chips" role="group" aria-label="Kategorie">${chips}</div>
     ${metal}
     <div class="strip-row">${strip}</div>
@@ -137,10 +168,12 @@ function adjustBarHtml() {
   const item = itemById(S.sel[S.cat]);
   const s = item?.fit?.s ?? 1;
   return `<div class="picker">
-    <p class="note" style="margin:0 16px 8px">${esc(item?.name || CAT[S.cat].one)}: auf dem Foto ziehen zum Verschieben.</p>
+    <p class="hint">${esc(item?.name || CAT[S.cat].one)}: mit einem Finger verschieben, mit zwei Fingern größer oder kleiner ziehen.</p>
     <div class="adjust-bar">
       <label for="fit-size">Größe</label>
-      <input id="fit-size" type="range" min="0.5" max="1.8" step="0.01" value="${s}">
+      <input id="fit-size" type="range" min="0.4" max="2.2" step="0.01" value="${s}">
+    </div>
+    <div class="row" style="padding:0 16px 12px">
       <button class="btn" data-act="fit-reset">Zurücksetzen</button>
       <button class="btn ink" data-act="adjust-done">Fertig</button>
     </div>
@@ -154,7 +187,7 @@ function mountStage() {
   const body = bodyView();
   stage.style.setProperty('--floor', body.guides.floor ?? 0.98);
   stage.innerHTML = `<img class="body" src="${body.src}" alt="">
-    <div id="layers"></div>
+    <div id="layers">${LAYER_ORDER.map((c) => `<div class="slot" data-cat="${c}"></div>`).join('')}</div>
     <div class="zone-tag" id="zone-tag"></div>`;
   const fit = () => {
     const cs = getComputedStyle(wrap);
@@ -173,45 +206,43 @@ function mountStage() {
   drawLayers();
   bindStageGestures(stage);
   if (S.adjusting) {
+    let raf = 0;
     $('#fit-size')?.addEventListener('input', (e) => {
       const item = itemById(S.sel[S.cat]);
       if (!item) return;
       item.fit = { dx: 0, dy: 0, ...item.fit, s: +e.target.value };
-      drawLayers();
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => drawLayers([S.cat]));
       saveItemsSoon();
     });
   }
-  // gewähltes Teil in der Leiste sichtbar machen
   $('#strip [aria-pressed="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' });
 }
 
-function drawLayers(anim) {
-  const host = $('#layers');
-  if (!host) return;
+const slotOf = (cat) => document.querySelector(`#layers .slot[data-cat="${cat}"]`);
+
+/** Zeichnet die Ebenen (alle oder nur die genannten Kategorien). */
+async function drawLayers(cats = LAYER_ORDER) {
+  if (!$('#layers')) return;
   const body = bodyView();
-  host.innerHTML = '';
-  for (const cat of LAYER_ORDER) {
+  await Promise.all(cats.map(async (cat) => {
+    const slot = slotOf(cat);
+    if (!slot) return;
+    slot.classList.toggle('target', S.adjusting && cat === S.cat);
     const item = itemById(S.sel[cat]);
-    if (!item || !urls.get(item.id)) continue;
-    const p = placeItem(item, body.guides, body.w, body.h);
-    const img = document.createElement('img');
-    img.className = 'layer' + (S.adjusting && cat === S.cat ? ' target' : '');
-    img.src = urls.get(item.id);
-    img.alt = '';
-    Object.assign(img.style, {
-      left: (p.x / body.w) * 100 + '%',
-      top: (p.y / body.h) * 100 + '%',
-      width: (p.w / body.w) * 100 + '%',
-      height: (p.h / body.h) * 100 + '%'
+    const url = item && urls.get(item.id);
+    if (!url) { slot.replaceChildren(); return; }
+    let l;
+    try { l = await layerFor(item, url, body, warpOn()); } catch (e) { console.warn(e); return; }
+    if (S.sel[cat] !== item.id || !slot.isConnected) return; // inzwischen gewechselt
+    Object.assign(l.canvas.style, {
+      left: (l.x / body.w) * 100 + '%',
+      top: (l.y / body.h) * 100 + '%',
+      width: (l.w / body.w) * 100 + '%',
+      height: (l.h / body.h) * 100 + '%'
     });
-    host.appendChild(img);
-    if (anim && anim.cat === cat && img.animate) {
-      img.animate(
-        [{ transform: `translateX(${anim.dir * 18}%)`, opacity: 0 }, { transform: 'none', opacity: 1 }],
-        { duration: 220, easing: 'cubic-bezier(.2,.8,.2,1)' }
-      );
-    }
-  }
+    if (slot.firstChild !== l.canvas) slot.replaceChildren(l.canvas);
+  }));
 }
 
 function showZoneTag(cat) {
@@ -229,81 +260,185 @@ function showZoneTag(cat) {
   showZoneTag.t = setTimeout(() => tag.classList.remove('show'), 1100);
 }
 
-function select(cat, id, anim) {
+/** Setzt ein Teil und gibt die Kategorien zurück, die sich geändert haben. */
+function select(cat, id) {
+  const changed = [cat];
   S.sel[cat] = id || null;
-  if (id && cat === 'kleid') { S.sel.oberteil = null; S.sel.hose = null; }
-  if (id && (cat === 'oberteil' || cat === 'hose')) S.sel.kleid = null;
+  if (id && cat === 'kleid') {
+    if (S.sel.oberteil) changed.push('oberteil');
+    if (S.sel.hose) changed.push('hose');
+    S.sel.oberteil = null; S.sel.hose = null;
+  }
+  if (id && (cat === 'oberteil' || cat === 'hose') && S.sel.kleid) { S.sel.kleid = null; changed.push('kleid'); }
   persistSettings();
-  drawLayers(anim);
+  return changed;
 }
 
-function cycle(cat, dir) {
+function nextId(cat, dir) {
   const ids = [null, ...listFor(cat).map((i) => i.id)];
-  if (ids.length < 2) {
-    toast(`Noch keine ${CAT[cat].label} im Schrank`);
-    return;
-  }
   const i = Math.max(0, ids.indexOf(S.sel[cat] || null));
-  const next = ids[(i + dir + ids.length) % ids.length];
-  select(cat, next, { cat, dir });
-  showZoneTag(cat);
+  return ids[(i + dir + ids.length) % ids.length];
 }
+
+let swapping = false;
+/** Wechselt ein Teil mit Animation (rausgleiten, neues reingleiten). */
+async function swapTo(cat, id, dir, fromDx = 0) {
+  if (swapping) return;
+  swapping = true;
+  const slot = slotOf(cat);
+  const w = $('#stage')?.clientWidth || 300;
+  try {
+    if (slot?.firstChild && slot.animate && !reduceMotion()) {
+      await slot.animate(
+        [{ transform: `translateX(${fromDx}px)`, opacity: Math.max(0.2, 1 - Math.abs(fromDx) / w) }, { transform: `translateX(${-dir * w * 0.45}px)`, opacity: 0 }],
+        { duration: 130, easing: 'ease-in' }
+      ).finished;
+    }
+    if (slot) { slot.style.transform = ''; slot.style.opacity = ''; slot.style.visibility = 'hidden'; }
+    const changed = select(cat, id);
+    await drawLayers(changed);
+    if (slot) {
+      slot.style.visibility = '';
+      if (slot.firstChild && slot.animate && !reduceMotion()) {
+        slot.animate([{ transform: `translateX(${dir * w * 0.3}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 200, easing: 'cubic-bezier(.2,.8,.2,1)' });
+      }
+    }
+    showZoneTag(cat);
+    refreshStripSelection();
+  } finally {
+    swapping = false;
+  }
+}
+const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function bindStageGestures(stage) {
-  let start = null;
+  const pts = new Map();
+  let g = null; // laufende Geste
+
+  const zoneCat = (clientY) => {
+    const rect = stage.getBoundingClientRect();
+    const zone = zoneAt((clientY - rect.top) / rect.height, bodyView().guides);
+    const zoneCats = CATEGORIES.filter((c) => c.zone === zone).map((c) => c.id);
+    return zoneCats.includes(S.cat) ? S.cat : ZONE_DEFAULT[zone];
+  };
+
   stage.addEventListener('pointerdown', (e) => {
-    start = { x: e.clientX, y: e.clientY, t: Date.now() };
+    stage.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (S.adjusting) {
       const item = itemById(S.sel[S.cat]);
       if (!item) return;
-      stage.setPointerCapture(e.pointerId);
-      start.fit = { dx: 0, dy: 0, s: 1, ...item.fit };
-    }
-  });
-  stage.addEventListener('pointermove', (e) => {
-    if (!start || !S.adjusting || !start.fit) return;
-    const item = itemById(S.sel[S.cat]);
-    const body = bodyView();
-    const rect = stage.getBoundingClientRect();
-    const b = zoneBox(item.cat, body.guides, body.w, body.h);
-    const pxPerUnitX = (b.w / body.w) * rect.width;
-    const pxPerUnitY = (b.h / body.h) * rect.height;
-    item.fit = {
-      ...start.fit,
-      dx: start.fit.dx + (e.clientX - start.x) / pxPerUnitX,
-      dy: start.fit.dy + (e.clientY - start.y) / pxPerUnitY
-    };
-    drawLayers();
-  });
-  stage.addEventListener('pointerup', (e) => {
-    if (!start) return;
-    const dx = e.clientX - start.x, dy = e.clientY - start.y;
-    const s = start;
-    start = null;
-    if (S.adjusting) { if (s.fit) saveItemsSoon(); return; }
-    const rect = stage.getBoundingClientRect();
-    const body = bodyView();
-    const zone = zoneAt((s.y - rect.top) / rect.height, body.guides);
-    const zoneCats = CATEGORIES.filter((c) => c.zone === zone).map((c) => c.id);
-    const cat = zoneCats.includes(S.cat) ? S.cat : ZONE_DEFAULT[zone];
-    if (Math.abs(dx) > 36 && Math.abs(dx) > Math.abs(dy) * 1.2) {
-      if (!S.settings.swiped) {
-        S.settings.swiped = true;
-        persistSettings();
-        $('.hint-swipe')?.remove();
+      const fit = { dx: 0, dy: 0, s: 1, ...item.fit };
+      const [a, b] = [...pts.values()];
+      if (pts.size === 1) g = { kind: 'move', x: a.x, y: a.y, fit, tx: 0, ty: 0, sc: 1 };
+      else if (pts.size === 2 && g) {
+        g.kind = 'pinch';
+        g.d0 = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+        g.mx0 = (a.x + b.x) / 2 - g.tx; g.my0 = (a.y + b.y) / 2 - g.ty;
+        g.sc0 = g.sc;
       }
-      const changedCat = cat !== S.cat;
-      S.cat = cat;
-      cycle(cat, dx < 0 ? 1 : -1);
-      if (changedCat) refreshPicker();
-      else refreshStripSelection();
-    } else if (Math.abs(dx) < 8 && Math.abs(dy) < 8) {
-      // Tippen wählt die Zone
-      if (cat !== S.cat) { S.cat = cat; refreshPicker(); }
-      showZoneTag(cat);
+      return;
+    }
+    if (pts.size === 1) g = { kind: 'swipe', x: e.clientX, y: e.clientY, cat: zoneCat(e.clientY), dragging: false };
+  });
+
+  stage.addEventListener('pointermove', (e) => {
+    if (!pts.has(e.pointerId) || !g) return;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (g.kind === 'swipe') {
+      const dx = e.clientX - g.x, dy = e.clientY - g.y;
+      if (!g.dragging && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) g.dragging = true;
+      if (g.dragging && !swapping) {
+        const slot = slotOf(g.cat);
+        if (slot) {
+          slot.style.transform = `translateX(${dx}px)`;
+          slot.style.opacity = String(Math.max(0.25, 1 - Math.abs(dx) / (stage.clientWidth * 0.9)));
+        }
+      }
+      return;
+    }
+    // Anpassen
+    const slot = slotOf(S.cat);
+    const [a, b] = [...pts.values()];
+    if (g.kind === 'move' && pts.size === 1) {
+      g.tx = a.x - g.x; g.ty = a.y - g.y;
+    } else if (g.kind === 'pinch' && pts.size >= 2) {
+      g.sc = Math.min(3, Math.max(0.3, g.sc0 * (Math.hypot(a.x - b.x, a.y - b.y) / g.d0)));
+      g.tx = (a.x + b.x) / 2 - g.mx0; g.ty = (a.y + b.y) / 2 - g.my0;
+    }
+    if (slot) {
+      const item = itemById(S.sel[S.cat]);
+      const body = bodyView();
+      const p = placeItem(item, body.guides, body.w, body.h);
+      const ox = ((p.x + p.w / 2) / body.w) * stage.clientWidth, oy = ((p.y + p.h / 2) / body.h) * stage.clientHeight;
+      slot.style.transformOrigin = `${ox}px ${oy}px`;
+      slot.style.transform = `translate(${g.tx}px, ${g.ty}px) scale(${g.sc})`;
     }
   });
-  stage.addEventListener('pointercancel', () => (start = null));
+
+  const end = (e) => {
+    if (!pts.has(e.pointerId)) return;
+    pts.delete(e.pointerId);
+    if (!g) return;
+    if (g.kind === 'swipe') {
+      const dx = e.clientX - g.x, dy = e.clientY - g.y;
+      const cur = g;
+      g = null;
+      const slot = slotOf(cur.cat);
+      if (e.type !== 'pointercancel' && Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+        const dir = dx < 0 ? 1 : -1;
+        if (!S.settings.swiped) { S.settings.swiped = true; persistSettings(); document.querySelector('.picker .hint')?.remove(); }
+        const changedCat = cur.cat !== S.cat;
+        S.cat = cur.cat;
+        if (changedCat) refreshPicker();
+        if (listFor(cur.cat).length === 0) {
+          if (slot) { slot.style.transform = ''; slot.style.opacity = ''; }
+          toast(`Noch keine ${CAT[cur.cat].label} im Schrank`);
+          return;
+        }
+        swapTo(cur.cat, nextId(cur.cat, dir), dir, dx);
+      } else {
+        if (slot && cur.dragging && slot.animate) {
+          slot.animate([{ transform: slot.style.transform, opacity: slot.style.opacity || 1 }, { transform: 'none', opacity: 1 }], { duration: 160, easing: 'ease-out' });
+        }
+        if (slot) { slot.style.transform = ''; slot.style.opacity = ''; }
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) {
+          if (cur.cat !== S.cat) { S.cat = cur.cat; refreshPicker(); }
+          showZoneTag(cur.cat);
+        }
+      }
+      return;
+    }
+    // Anpassen abschließen, sobald kein Finger mehr liegt
+    if (pts.size > 0) {
+      if (g.kind === 'pinch') { const [a] = [...pts.values()]; g.kind = 'move'; g.x = a.x - g.tx; g.y = a.y - g.ty; }
+      return;
+    }
+    const item = itemById(S.sel[S.cat]);
+    const done = g;
+    g = null;
+    if (!item) return;
+    const stageR = stage.getBoundingClientRect();
+    const body = bodyView();
+    const box = zoneBox(item.cat, body.guides, body.w, body.h);
+    const pxX = (box.w / body.w) * stageR.width, pxY = (box.h / body.h) * stageR.height;
+    // Skalierung um die Teil-Mitte verschiebt die Oberkante bei top-verankerten Teilen
+    const p = placeItem(item, body.guides, body.w, body.h);
+    const hPx = (p.h / body.h) * stageR.height;
+    const anchorShift = box.anchor === 'bottom' ? (hPx * (done.sc - 1)) / 2 : (-hPx * (done.sc - 1)) / 2;
+    item.fit = {
+      dx: done.fit.dx + done.tx / pxX,
+      dy: done.fit.dy + (done.ty + anchorShift) / pxY,
+      s: Math.min(2.2, Math.max(0.4, done.fit.s * done.sc))
+    };
+    const slot = slotOf(S.cat);
+    drawLayers([S.cat]).then(() => { if (slot) { slot.style.transform = ''; slot.style.transformOrigin = ''; } });
+    const range = $('#fit-size');
+    if (range) range.value = item.fit.s;
+    saveItemsSoon();
+  };
+  stage.addEventListener('pointerup', end);
+  stage.addEventListener('pointercancel', end);
 }
 
 function refreshPicker() {
@@ -316,12 +451,39 @@ function refreshStripSelection() {
   const cur = S.sel[S.cat] || '';
   document.querySelectorAll('#strip .thumb').forEach((t) => t.setAttribute('aria-pressed', String(t.dataset.id === cur)));
   $('#strip [aria-pressed="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
-  const head = document.querySelector('.head');
-  if (head) {
-    const has = LAYER_ORDER.some((c) => S.sel[c] && itemById(S.sel[c]));
-    head.querySelector('[data-act="save-outfit"]').disabled = !has;
-    head.querySelector('[data-act="clear-outfit"]').disabled = !has;
+  const has = hasOutfit();
+  const save = document.querySelector('.head [data-act="save-outfit"]');
+  if (save) save.disabled = !has;
+  const clear = document.querySelector('[data-act="clear-outfit"]');
+  if (clear) clear.disabled = !has;
+  // Anpassen-Knopf nur, wenn etwas gewählt ist
+  const row = document.querySelector('.strip-row');
+  const adj = row?.querySelector('[data-act="adjust"]');
+  if (row && !adj && S.sel[S.cat]) row.insertAdjacentHTML('beforeend', `<button class="icon-btn" data-act="adjust" aria-label="Sitz anpassen">${I.move}</button>`);
+  if (adj && !S.sel[S.cat]) adj.remove();
+}
+
+function shuffle() {
+  const pick = (cat) => { const l = listFor(cat); return l.length ? l[Math.floor(Math.random() * l.length)].id : null; };
+  const nTops = S.items.filter((i) => i.cat === 'oberteil').length;
+  const nDress = S.items.filter((i) => i.cat === 'kleid').length;
+  const sel = { ...S.sel };
+  if (nDress && Math.random() < nDress / (nDress + nTops + 0.001)) {
+    sel.kleid = pick('kleid'); sel.oberteil = null; sel.hose = null;
+  } else {
+    sel.kleid = null; sel.oberteil = pick('oberteil'); sel.hose = pick('hose');
   }
+  sel.schuhe = pick('schuhe');
+  sel.jacke = Math.random() < 0.35 ? pick('jacke') : null;
+  sel.schmuck = Math.random() < 0.5 ? pick('schmuck') : null;
+  S.sel = sel;
+  persistSettings();
+  const slots = document.querySelectorAll('#layers .slot');
+  drawLayers().then(() => {
+    if (reduceMotion()) return;
+    slots.forEach((s, i) => s.firstChild && s.animate?.([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 220, delay: i * 35, easing: 'ease-out', fill: 'backwards' }));
+  });
+  refreshStripSelection();
 }
 
 let itemsTimer;
@@ -496,14 +658,15 @@ async function scanRaw() {
 function showScanResult(canvas) {
   const cat = scanCtx.presetCat || guessCategory(canvas);
   const color = dominantColor(canvas);
-  scanCtx.result = { canvas, cat, color, metal: guessMetal(canvas), name: '' };
+  scanCtx.result = { canvas, cat, color, metal: guessMetal(canvas), name: '', catTouched: !!scanCtx.presetCat };
   const src = canvas.toDataURL('image/png');
   const el = $('#scan');
   el.innerHTML = `${scanHeader('Passt das so?')}
-    <div class="preview"><img src="${src}" alt="Ausgeschnittenes Teil"></div>
+    <div class="preview"><img id="res-img" src="${src}" alt="Ausgeschnittenes Teil"></div>
+    <div class="row" style="margin-top:8px"><button class="btn" data-act="scan-rotate">${I.rotate}Drehen</button></div>
     <div class="field"><span>Was ist es?</span><div class="wrap-chips" id="res-cat">${CATEGORIES.map((c) => `<button class="chip" data-act="res-cat" data-id="${c.id}" aria-pressed="${c.id === cat}">${c.one}</button>`).join('')}</div></div>
     <div class="field" id="res-metal" ${cat === 'schmuck' ? '' : 'hidden'}><span>Metall</span><div class="wrap-chips">${METALS.map((m) => `<button class="chip" data-act="res-metal" data-id="${m.id}" aria-pressed="${m.id === scanCtx.result.metal}"><span class="dot metal-${m.id}"></span>${m.label}</button>`).join('')}</div></div>
-    <div class="field"><span>Name (optional)</span><input type="text" id="res-name" placeholder="${esc(color.name)} ${esc(CAT[cat].one)}" autocomplete="off"></div>
+    <div class="field"><span>Name (optional)</span><input type="text" id="res-name" placeholder="${esc(color.name)} ${esc(CAT[cat].noun)}" autocomplete="off"></div>
     <div class="color-line"><span class="sw" style="background:${color.hex}"></span>Farbe erkannt: ${esc(color.name)}</div>
     <div class="row" style="margin-top:16px">
       <button class="btn" data-act="scan-again">Verwerfen</button>
@@ -511,9 +674,29 @@ function showScanResult(canvas) {
     </div>`;
 }
 
+function scanRotate() {
+  const r = scanCtx.result;
+  const src = r.canvas;
+  const c = document.createElement('canvas');
+  c.width = src.height;
+  c.height = src.width;
+  const ctx = c.getContext('2d');
+  ctx.translate(c.width, 0);
+  ctx.rotate(Math.PI / 2);
+  ctx.drawImage(src, 0, 0);
+  r.canvas = c;
+  $('#res-img').src = c.toDataURL('image/png');
+  if (!r.catTouched) {
+    const el = document.querySelector(`#res-cat [data-id="${guessCategory(c)}"]`);
+    if (el) { actions['res-cat'](el); r.catTouched = false; }
+  }
+}
+
 async function scanSave() {
   const r = scanCtx.result;
-  const name = $('#res-name').value.trim() || `${r.color.name} ${CAT[r.cat].one}`;
+  if (r.saving) return;
+  r.saving = true;
+  const name = $('#res-name').value.trim() || `${r.color.name} ${CAT[r.cat].noun}`;
   const blob = await toBlob(r.canvas, 'image/png');
   const id = uid();
   await saveImage(id, blob);
@@ -550,7 +733,7 @@ function openBodySetup() {
 async function processBody(file) {
   const el = $('#scan');
   el.innerHTML = busyHtml('Dein Foto', 'Foto wird vorbereitet');
-  let canvas;
+  let canvas, cutout = true;
   try {
     const cut = await removeBg(file, { maxSide: 1600, onProgress });
     canvas = trimCanvas(cut, 1600, 0.03);
@@ -559,11 +742,12 @@ async function processBody(file) {
     console.error(err);
     const bmp = await loadBitmap(file);
     canvas = canvasFrom(bmp, 1600);
+    cutout = false;
     toast('Hintergrund nicht entfernt, Foto wird so verwendet');
   }
   const guides = estimateGuides(canvas);
   const blob = await toBlob(canvas, 'image/png');
-  scanCtx.bodyDraft = { blob, w: canvas.width, h: canvas.height, guides, src: URL.createObjectURL(blob) };
+  scanCtx.bodyDraft = { blob, w: canvas.width, h: canvas.height, guides, cutout, src: URL.createObjectURL(blob) };
   openGuides(scanCtx.bodyDraft);
 }
 
@@ -626,7 +810,7 @@ async function guidesSave() {
     await saveImage('body', draft.blob);
     setUrl('body', draft.blob);
   }
-  S.body = { w: draft.w, h: draft.h, guides: g, updated: Date.now() };
+  S.body = { w: draft.w, h: draft.h, guides: g, cutout: draft.cutout !== false, updated: Date.now() };
   await saveBody(S.body);
   requestPersistence();
   closeSheet();
@@ -636,26 +820,44 @@ async function guidesSave() {
 }
 
 // ---------- Outfits speichern ----------
-const loadImg = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+const outfitSig = (sel) =>
+  JSON.stringify([
+    LAYER_ORDER.map((c) => { const it = itemById(sel[c]); return it ? [it.id, it.cat, it.fit || null] : null; }),
+    S.body?.updated || 0, warpOn()
+  ]);
 
 async function composeOutfit(sel) {
-  const body = bodyView();
-  const H = 1000, W = Math.round((H * body.w) / body.h);
-  const c = document.createElement('canvas');
-  c.width = W + 120; c.height = H + 80;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#E1E4DD';
-  ctx.fillRect(0, 0, c.width, c.height);
-  ctx.translate(60, 40);
-  const k = H / body.h;
-  ctx.drawImage(await loadImg(body.src), 0, 0, W, H);
-  for (const cat of LAYER_ORDER) {
-    const item = itemById(sel[cat]);
-    if (!item || !urls.get(item.id)) continue;
-    const p = placeItem(item, body.guides, body.w, body.h);
-    ctx.drawImage(await loadImg(urls.get(item.id)), p.x * k, p.y * k, p.w * k, p.h * k);
+  const urlOf = (id) => urls.get(id);
+  try {
+    return await composeImage(sel, bodyView(), itemById, urlOf, LAYER_ORDER, warpOn());
+  } catch (e) {
+    // Fallback ohne Figur (manche Browser sperren SVG-Bilder im Canvas)
+    console.warn(e);
+    return composeImage(sel, { ...bodyView(), src: 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==' }, itemById, urlOf, LAYER_ORDER, warpOn());
   }
-  return toBlob(c, 'image/jpeg', 0.85);
+}
+
+/** Outfit-Vorschauen neu zeichnen, wenn sich Teile, Sitz oder Foto geändert haben. */
+let refreshingThumbs = false;
+async function refreshStaleThumbs() {
+  if (refreshingThumbs) return;
+  refreshingThumbs = true;
+  try {
+    for (const o of S.outfits) {
+      const sig = outfitSig(o.sel);
+      if (o.sig === sig) continue;
+      if (!Object.values(o.sel).some((id) => itemById(id))) continue;
+      const blob = await composeOutfit(o.sel);
+      await saveImage('outfit:' + o.id, blob);
+      setUrl('outfit:' + o.id, blob);
+      o.sig = sig;
+      const img = document.querySelector(`[data-act="outfit"][data-id="${o.id}"] img`);
+      if (img) img.src = urls.get('outfit:' + o.id);
+    }
+    await saveOutfits(S.outfits);
+  } finally {
+    refreshingThumbs = false;
+  }
 }
 
 function dayChips(days, act) {
@@ -680,7 +882,7 @@ async function outfitSave() {
   const blob = await composeOutfit(sel);
   await saveImage('outfit:' + id, blob);
   setUrl('outfit:' + id, blob);
-  S.outfits.push({ id, name, sel, days: S._draftDays.slice(), created: Date.now() });
+  S.outfits.push({ id, name, sel, days: S._draftDays.slice(), created: Date.now(), sig: outfitSig(sel) });
   await saveOutfits(S.outfits);
   requestPersistence();
   closeSheet();
@@ -740,6 +942,10 @@ async function openSettings() {
       <button class="btn" data-act="body-setup">${S.body ? 'Ganzkörperfoto ändern' : 'Ganzkörperfoto hinzufügen'}</button>
       ${S.body ? '<button class="btn" data-act="guides">Hilfslinien anpassen</button>' : ''}
     </div>
+    <button class="switch-row" role="switch" aria-checked="${warpOn()}" data-act="toggle-warp">
+      <span><b>Kleidung an Körperform anpassen</b><br><span class="note">${S.body && S.body.cutout !== false ? 'Oberteile, Jacken, Kleider und Hosen folgen der Silhouette auf deinem Foto.' : 'Wirkt, sobald ein freigestelltes Ganzkörperfoto hinterlegt ist.'}</span></span>
+      <i aria-hidden="true"></i>
+    </button>
     <h3 class="section-title">Speicherung</h3>
     <p class="note" style="margin-top:0">${status}</p>
     <p class="note">Eine Sicherung legt alles in eine Datei, die du z. B. in iCloud Drive ablegen und auf einem neuen iPhone wieder einlesen kannst.</p>
@@ -784,7 +990,7 @@ const actions = {
     const cur = itemById(S.sel.schmuck);
     if (S.metal !== 'alle' && (!cur || cur.metal !== S.metal)) {
       const first = listFor('schmuck')[0];
-      select('schmuck', first ? first.id : null, { cat: 'schmuck', dir: 1 });
+      swapTo('schmuck', first ? first.id : null, 1);
     }
     persistSettings();
     refreshPicker();
@@ -792,17 +998,31 @@ const actions = {
   },
   pick: (el) => {
     const id = el.dataset.id || null;
+    if ((S.sel[S.cat] || null) === id) return;
     const prev = listFor(S.cat).findIndex((i) => i.id === S.sel[S.cat]);
     const next = listFor(S.cat).findIndex((i) => i.id === id);
-    select(S.cat, id, { cat: S.cat, dir: next >= prev ? 1 : -1 });
-    refreshPicker();
-    refreshStripSelection();
-    showZoneTag(S.cat);
+    document.querySelectorAll('#strip .thumb').forEach((t) => t.setAttribute('aria-pressed', String(t === el)));
+    swapTo(S.cat, id, next >= prev ? 1 : -1);
+  },
+  shuffle,
+  'today-dismiss': () => { S.settings.todayDismissed = dateKey(); persistSettings(); render(); },
+  'toggle-warp': (el) => {
+    S.settings.warp = !warpOn();
+    el.setAttribute('aria-checked', String(warpOn()));
+    persistSettings();
+    drawLayers();
   },
   adjust: () => { S.adjusting = true; render(); },
   'adjust-done': () => { S.adjusting = false; saveItems(S.items); render(); },
   'fit-reset': () => { const it = itemById(S.sel[S.cat]); if (it) { it.fit = null; saveItems(S.items); render(); } },
-  'clear-outfit': () => { S.sel = {}; persistSettings(); drawLayers(); refreshPicker(); refreshStripSelection(); },
+  'clear-outfit': () => {
+    const prev = { ...S.sel };
+    S.sel = {};
+    persistSettings();
+    drawLayers();
+    refreshStripSelection();
+    toastAction('Outfit geleert', 'Rückgängig', () => { S.sel = prev; persistSettings(); drawLayers(); refreshStripSelection(); });
+  },
   'save-outfit': openSaveOutfit,
   'outfit-save': outfitSave,
   'o-day': (el) => {
@@ -859,6 +1079,7 @@ const actions = {
     for (const c of Object.keys(S.sel)) if (S.sel[c] === it.id) S.sel[c] = null;
     await saveItems(S.items);
     await deleteImage(it.id);
+    forgetItem(it.id);
     persistSettings();
     closeSheet();
     render();
@@ -868,11 +1089,13 @@ const actions = {
   'scan-again': () => nextInQueue(),
   'scan-skip': () => nextInQueue(),
   'scan-raw': scanRaw,
+  'scan-rotate': scanRotate,
   'res-cat': (el) => {
     scanCtx.result.cat = el.dataset.id;
+    scanCtx.result.catTouched = true;
     document.querySelectorAll('#res-cat .chip').forEach((c) => c.setAttribute('aria-pressed', String(c === el)));
     $('#res-metal').hidden = el.dataset.id !== 'schmuck';
-    $('#res-name').placeholder = `${scanCtx.result.color.name} ${CAT[el.dataset.id].one}`;
+    $('#res-name').placeholder = `${scanCtx.result.color.name} ${CAT[el.dataset.id].noun}`;
   },
   'res-metal': (el) => {
     scanCtx.result.metal = el.dataset.id;
@@ -884,7 +1107,7 @@ const actions = {
     if (!S.body) return;
     closeSheet();
     scanCtx = { queue: [] };
-    openGuides({ w: S.body.w, h: S.body.h, guides: S.body.guides, src: urls.get('body') });
+    openGuides({ w: S.body.w, h: S.body.h, guides: S.body.guides, cutout: S.body.cutout, src: urls.get('body') });
   },
   'guides-save': guidesSave,
   settings: openSettings,

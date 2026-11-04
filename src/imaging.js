@@ -225,11 +225,27 @@ export function guessMetal(canvas) {
   return n && warm / n > 22 ? 'gold' : 'silber';
 }
 
-/** Kategorie grob anhand der Form vorschlagen. */
+/** Kategorie grob anhand der Form vorschlagen (Seitenverhältnis + wo das Teil breiter ist). */
 export function guessCategory(canvas) {
   const r = canvas.width / canvas.height;
-  if (r > 1.45) return 'schuhe';
   if (r < 0.62) return 'hose';
+  const c = canvasFrom(canvas, 120);
+  const { width: w, height: h } = c;
+  const d = c.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+  const band = (f0, f1) => {
+    let sum = 0, n = 0;
+    for (let y = Math.floor(h * f0); y < Math.floor(h * f1); y++) {
+      let a = -1, b = -1;
+      for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 100) { if (a < 0) a = x; b = x; }
+      if (a >= 0) { sum += b - a + 1; n++; }
+    }
+    return n ? sum / n : 0;
+  };
+  const topW = band(0.1, 0.3), botW = band(0.7, 0.9);
+  if (r > 1.2 && botW > topW * 1.15) return 'schuhe'; // Sohle unten breiter
+  if (topW > botW * 1.1) return 'oberteil'; // Schultern/Ärmel oben breiter
+  if (botW > topW * 1.25) return 'hose'; // z. B. ausgestellter Rock
+  if (r > 1.6) return 'schuhe';
   return 'oberteil';
 }
 
@@ -252,8 +268,47 @@ export function estimateGuides(canvas) {
     }
     return a < 0 ? null : [a / w, b / w];
   };
-  const s = top + H * 0.185, hip = top + H * 0.5, a = top + H * 0.94;
-  const chest = rowSpan(top + H * 0.3) || [0.3, 0.7];
+  // Breite des mittleren Abschnitts je Zeile (Hals schmal, Schultern breit, Knöchel schmal)
+  const centerRun = (yr, cx) => {
+    const y = Math.min(h - 1, Math.max(0, Math.round(yr * h)));
+    const X = Math.round(cx * w);
+    const on = (x) => d[(y * w + x) * 4 + 3] > 100;
+    if (!on(X)) return 0;
+    let a = X, b = X;
+    while (a > 0 && on(a - 1)) a--;
+    while (b < w - 1 && on(b + 1)) b++;
+    return (b - a + 1) / w;
+  };
+  const cx0 = box.x / w + box.w / w / 2;
+  // Hals: schmalste Stelle zwischen 9 % und 22 % der Körperhöhe
+  let neckY = top + H * 0.15, neckW = Infinity;
+  for (let t = 0.09; t <= 0.22; t += 0.005) {
+    const wr = centerRun(top + H * t, cx0);
+    if (wr > 0 && wr < neckW) { neckW = wr; neckY = top + H * t; }
+  }
+  // Schultern: erste Zeile unter dem Hals, die deutlich breiter ist
+  let s = top + H * 0.185;
+  const chestW = centerRun(top + H * 0.32, cx0);
+  // Kopf nicht im Bild (z. B. abgeschnitten): oberste Zeilen sind schon breit
+  const headless = chestW > 0 && centerRun(top + H * 0.015, cx0) > chestW * 0.6;
+  if (headless) s = top + H * 0.012;
+  // Nur wenn wirklich ein schmaler Hals gefunden wurde (Kopf ist mit im Bild)
+  if (!headless && isFinite(neckW) && chestW > 0 && neckW < chestW * 0.55) {
+    for (let y = neckY; y < top + H * 0.3; y += H * 0.004) {
+      if (centerRun(y, cx0) > neckW * 2.6) { s = y + H * 0.01; break; }
+    }
+  }
+  // Hüfte: übliche Körperproportion zwischen Schultern und Boden
+  const hip = s + (bottom - s) * 0.386;
+  // Knöchel: schmalste Beinbreite zwischen 86 % und 97 %
+  let a = top + H * 0.94, best = Infinity;
+  for (let t = 0.86; t <= 0.97; t += 0.005) {
+    const span = rowSpan(top + H * t);
+    if (!span) continue;
+    const wd = span[1] - span[0];
+    if (wd < best) { best = wd; a = top + H * t; }
+  }
+  const chest = rowSpan(s + (hip - s) * 0.35) || [0.3, 0.7];
   const hipSpan = rowSpan(hip) || chest;
   return {
     s, h: hip, a, floor: bottom,

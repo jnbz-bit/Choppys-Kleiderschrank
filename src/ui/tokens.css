@@ -76,7 +76,7 @@
 
   /* ---------- Glas ---------- */
   --glass-bg: color-mix(in srgb, var(--bg-elevated) 62%, transparent);
-  --glass-bg-strong: color-mix(in srgb, var(--bg-elevated) 78%, transparent);
+  --glass-bg-strong: color-mix(in srgb, var(--bg-elevated) 86%, transparent);
   --glass-blur: blur(24px) saturate(180%);
   --glass-edge: rgba(255, 255, 255, .5);
   --glass-shadow: 0 8px 30px rgba(0, 0, 0, .12);
@@ -166,7 +166,7 @@
     --stage-shadow: rgba(0, 0, 0, .55);
     --tint: #FF375F;
     --glass-bg: color-mix(in srgb, #2C2C2E 58%, transparent);
-    --glass-bg-strong: color-mix(in srgb, #2C2C2E 80%, transparent);
+    --glass-bg-strong: color-mix(in srgb, #2C2C2E 84%, transparent);
     --glass-edge: rgba(255, 255, 255, .12);
     --glass-shadow: 0 8px 30px rgba(0, 0, 0, .40);
     --shadow-1: 0 1px 2px rgba(0, 0, 0, .3);
@@ -200,7 +200,7 @@
   --stage-shadow: rgba(0, 0, 0, .55);
   --tint: #FF375F;
   --glass-bg: color-mix(in srgb, #2C2C2E 58%, transparent);
-  --glass-bg-strong: color-mix(in srgb, #2C2C2E 80%, transparent);
+  --glass-bg-strong: color-mix(in srgb, #2C2C2E 84%, transparent);
   --glass-edge: rgba(255, 255, 255, .12);
   --glass-shadow: 0 8px 30px rgba(0, 0, 0, .40);
   --shadow-1: 0 1px 2px rgba(0, 0, 0, .3);

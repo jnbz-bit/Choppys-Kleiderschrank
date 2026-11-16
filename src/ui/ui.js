@@ -263,7 +263,8 @@ function focusables(root) {
     .filter((n) => n.offsetParent !== null || n === document.activeElement);
 }
 document.addEventListener('keydown', (e) => {
-  const top = stack[stack.length - 1];
+  const live = stack.filter((r) => !r.closing);
+  const top = live[live.length - 1];
   if (!top) return;
   if (e.key === 'Escape') {
     e.preventDefault();
@@ -599,6 +600,7 @@ export function actionSheet({ title = '', message = '', actions = [], cancel = '
     async function finish(value) {
       if (done) return;
       done = true;
+      rec.closing = true;
       box.inert = true;
       resolve(value);
       await Promise.all([
@@ -664,6 +666,7 @@ export function alert({ title = '', message = '', buttons, input = null, dismiss
     async function finish(value) {
       if (done) return;
       done = true;
+      rec.closing = true;
       box.inert = true;
       resolve(input ? { value, text: field.value } : value);
       await Promise.all([
@@ -720,7 +723,7 @@ export function toast(text, opts = {}) {
   currentToast?.close(true);
   const pos = opts.position && opts.position !== 'auto'
     ? opts.position
-    : stack.length || document.querySelector('.tabbar.is-hidden') ? 'top' : 'bottom';
+    : stack.some((r) => !r.closing) || document.querySelector('.tabbar.is-hidden') ? 'top' : 'bottom';
   const t = document.createElement('div');
   t.className = `toast is-${pos}${opts.icon ? ' has-icon' : ''}`;
   t.setAttribute('role', 'status');
@@ -815,6 +818,7 @@ export function contextMenu(target, { actions = [], preview = true } = {}) {
     async function finish(action) {
       if (done) return;
       done = true;
+      rec.closing = true;
       layer.inert = true;
       const anims = [
         menu.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(.7)' }], { duration: 200, easing: 'ease-in', fill: 'forwards' }).finished,

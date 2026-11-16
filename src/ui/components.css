@@ -479,7 +479,7 @@ button.card[data-pressed], .card.is-pressable[data-pressed] { --press: .97; tran
 .banner-icon svg { width: 20px; height: 20px; }
 .banner-icon > img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
 .banner-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.banner-title { font: var(--text-subhead); font-weight: 600; letter-spacing: var(--track-subhead); }
+.banner-title { font: var(--text-subhead); font-weight: 600; letter-spacing: var(--track-subhead); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .banner-text { font: var(--text-footnote); letter-spacing: var(--track-footnote); color: var(--label-2); }
 .banner .btn { flex-shrink: 0; }
 .banner-close { width: 30px; height: 30px; display: grid; place-items: center; color: var(--label-2); border-radius: 50%; flex-shrink: 0; }
@@ -754,7 +754,7 @@ button.card[data-pressed], .card.is-pressable[data-pressed] { --press: .97; tran
 }
 .sheet-leading, .sheet-trailing { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .sheet-trailing { justify-content: flex-end; }
-.sheet-header .btn { --btn-h: 40px; padding: 0 16px; font-weight: 400; }
+.sheet-header .btn { --btn-h: 38px; padding: 0 14px; font-weight: 400; }
 .sheet-header .btn.is-bold { font-weight: 600; }
 .sheet-header .btn:disabled { opacity: .35; }
 .sheet-body {

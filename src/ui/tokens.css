@@ -1,0 +1,247 @@
+/* =====================================================================
+   Kleiderschrank – Design-Tokens (iOS 26 / Liquid Glass)
+   Farben hell/dunkel, Tint, Schrift, Maße, Radien, Kurven, Materialien.
+   Hell = Standard. Dunkel über prefers-color-scheme ODER html[data-appearance="dark"].
+   html[data-appearance="light"] erzwingt Hell.
+   ===================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* ---------- Schrift ---------- */
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Helvetica Neue", sans-serif;
+  --font-rounded: ui-rounded, -apple-system, BlinkMacSystemFont, "SF Pro Rounded", system-ui, sans-serif;
+
+  /* font-Kurzschreibweisen: font: var(--text-body); */
+  --text-large-title: 700 34px/41px var(--font);
+  --text-title1: 700 28px/34px var(--font);
+  --text-title2: 700 22px/28px var(--font);
+  --text-title3: 600 20px/25px var(--font);
+  --text-headline: 600 17px/22px var(--font);
+  --text-body: 400 17px/22px var(--font);
+  --text-callout: 400 16px/21px var(--font);
+  --text-subhead: 400 15px/20px var(--font);
+  --text-footnote: 400 13px/18px var(--font);
+  --text-caption: 400 12px/16px var(--font);
+  --text-caption2: 500 11px/13px var(--font);
+
+  --track-large-title: .011em;
+  --track-title1: .012em;
+  --track-title2: -.012em;
+  --track-title3: -.022em;
+  --track-body: -.022em;
+  --track-callout: -.02em;
+  --track-subhead: -.016em;
+  --track-footnote: -.006em;
+  --track-caption: 0em;
+
+  /* ---------- Farben hell ---------- */
+  --bg: #F2F2F7;                    /* systemGroupedBackground */
+  --bg-elevated: #FFFFFF;           /* Karten, Gruppen, Sheets */
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #F2F2F7;           /* Fläche in einer Gruppe */
+  --bg-sheet: #F2F2F7;              /* Grund eines großen Sheets (grouped) */
+  --fill: rgba(120, 120, 128, .20);
+  --fill-2: rgba(120, 120, 128, .16);
+  --fill-3: rgba(118, 118, 128, .12);
+  --fill-4: rgba(116, 116, 128, .08);
+
+  --label: #000000;
+  --label-2: rgba(60, 60, 67, .60);
+  --label-3: rgba(60, 60, 67, .30);
+  --label-4: rgba(60, 60, 67, .18);
+  --separator: rgba(60, 60, 67, .29);
+  --separator-opaque: #C6C6C8;
+
+  --red: #FF3B30;
+  --green: #34C759;
+  --yellow: #FFCC00;
+  --gold: #D4AF37;
+  --silver: #C0C0C8;
+  --on-tint: #FFFFFF;               /* Text/Symbol auf Tint-Fläche */
+  --knockout: var(--bg-elevated);   /* Aussparung in gefüllten Symbolen */
+
+  --scrim: rgba(0, 0, 0, .30);      /* Abdunklung hinter Sheets */
+  --behind-sheet: #000000;          /* sichtbar hinter zurückskalierter Seite */
+
+  /* Bühne / Studio-Hintergrund */
+  --stage-top: #FAFAFC;
+  --stage-bottom: #E9E9EF;
+  --stage-shadow: rgba(0, 0, 0, .16);
+
+  /* ---------- Tint (Akzent) – Standard Rosé ---------- */
+  --tint: #FF2D55;
+  --tint-soft: color-mix(in srgb, var(--tint) 14%, transparent);
+  --tint-softer: color-mix(in srgb, var(--tint) 8%, transparent);
+
+  /* ---------- Glas ---------- */
+  --glass-bg: color-mix(in srgb, var(--bg-elevated) 62%, transparent);
+  --glass-bg-strong: color-mix(in srgb, var(--bg-elevated) 78%, transparent);
+  --glass-blur: blur(24px) saturate(180%);
+  --glass-edge: rgba(255, 255, 255, .5);
+  --glass-shadow: 0 8px 30px rgba(0, 0, 0, .12);
+  --glass: inset 0 0 0 .5px var(--glass-edge), var(--glass-shadow);
+
+  /* ---------- Schatten ---------- */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .04), 0 2px 8px rgba(0, 0, 0, .04);
+  --shadow-2: 0 4px 16px rgba(0, 0, 0, .08), 0 1px 3px rgba(0, 0, 0, .05);
+  --shadow-3: 0 18px 50px rgba(0, 0, 0, .18), 0 4px 12px rgba(0, 0, 0, .08);
+
+  /* ---------- Radien ---------- */
+  --r-xs: 10px;
+  --r-s: 14px;
+  --r-m: 18px;     /* Kacheln */
+  --r-l: 22px;     /* Gruppen, Karten */
+  --r-xl: 26px;    /* große Karten, Action Sheet */
+  --r-sheet: 34px; /* Sheets oben */
+  --r-capsule: 999px;
+
+  /* ---------- Maße ---------- */
+  --hairline: 1px;
+  --gap: 16px;          /* Standard-Rand */
+  --gap-title: 20px;    /* Rand bei großen Titeln */
+  --row-h: 48px;        /* Listenzeile */
+  --nav-h: 52px;        /* Navigationsleiste (ohne Safe-Area) */
+  --tabbar-h: 62px;
+  --tap: 44px;
+
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --tabbar-bottom: max(12px, var(--safe-b));
+  --sheet-gap-top: max(10px, var(--safe-t));   /* Oberkante der zurückskalierten Seite */
+  /* Abstand unten für scrollende Inhalte unter der Tab-Leiste */
+  --tabbar-space: calc(var(--tabbar-h) + var(--tabbar-bottom) + 24px);
+
+  /* ---------- Bewegung ---------- */
+  --spring: cubic-bezier(.32, .72, 0, 1);            /* iOS-Sheet-Kurve */
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+  --ease-in: cubic-bezier(.55, 0, 1, .45);
+  --spring-bounce: cubic-bezier(.34, 1.45, .64, 1);  /* Fallback mit leichtem Überschwingen */
+  --dur-press: 120ms;
+  --dur-fast: 220ms;
+  --dur: 380ms;
+  --dur-slow: 500ms;
+}
+
+/* Echte Federkurven, wo linear() unterstützt wird */
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --spring-bounce: linear(0, .0189 1%, .0743 2.1%, .2849 4.7%, .5578 7.8%, .8091 11.2%, .9087 12.9%, .9947 14.6%,
+      1.0597 16.3%, 1.1075 18.1%, 1.1356 19.9%, 1.1474 21.7%, 1.1408 23.9%, 1.1159 26.4%, 1.0353 33.4%,
+      1.0072 37.4%, .9895 42.4%, .9887 48.4%, 1.0009 61.6%, 1.0021 70.2%, 1);
+  }
+}
+
+@media (min-resolution: 2dppx) {
+  :root { --hairline: .5px; }
+}
+
+/* ---------- Farben dunkel (zweimal: System + erzwungen) ---------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-appearance="light"]) {
+    color-scheme: dark;
+    --bg: #000000;
+    --bg-elevated: #1C1C1E;
+    --bg-secondary: #1C1C1E;
+    --bg-tertiary: #2C2C2E;
+    --bg-sheet: #1C1C1E;
+    --fill: rgba(120, 120, 128, .36);
+    --fill-2: rgba(120, 120, 128, .32);
+    --fill-3: rgba(118, 118, 128, .24);
+    --fill-4: rgba(116, 116, 128, .18);
+    --label: #FFFFFF;
+    --label-2: rgba(235, 235, 245, .60);
+    --label-3: rgba(235, 235, 245, .30);
+    --label-4: rgba(235, 235, 245, .16);
+    --separator: rgba(84, 84, 88, .60);
+    --separator-opaque: #38383A;
+    --red: #FF453A;
+    --green: #30D158;
+    --yellow: #FFD60A;
+    --scrim: rgba(0, 0, 0, .48);
+    --stage-top: #1C1C1E;
+    --stage-bottom: #0A0A0C;
+    --stage-shadow: rgba(0, 0, 0, .55);
+    --tint: #FF375F;
+    --glass-bg: color-mix(in srgb, #2C2C2E 58%, transparent);
+    --glass-bg-strong: color-mix(in srgb, #2C2C2E 80%, transparent);
+    --glass-edge: rgba(255, 255, 255, .12);
+    --glass-shadow: 0 8px 30px rgba(0, 0, 0, .40);
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .3);
+    --shadow-2: 0 4px 16px rgba(0, 0, 0, .35);
+    --shadow-3: 0 18px 50px rgba(0, 0, 0, .55);
+  }
+}
+:root[data-appearance="dark"] {
+  color-scheme: dark;
+  --bg: #000000;
+  --bg-elevated: #1C1C1E;
+  --bg-secondary: #1C1C1E;
+  --bg-tertiary: #2C2C2E;
+  --bg-sheet: #1C1C1E;
+  --fill: rgba(120, 120, 128, .36);
+  --fill-2: rgba(120, 120, 128, .32);
+  --fill-3: rgba(118, 118, 128, .24);
+  --fill-4: rgba(116, 116, 128, .18);
+  --label: #FFFFFF;
+  --label-2: rgba(235, 235, 245, .60);
+  --label-3: rgba(235, 235, 245, .30);
+  --label-4: rgba(235, 235, 245, .16);
+  --separator: rgba(84, 84, 88, .60);
+  --separator-opaque: #38383A;
+  --red: #FF453A;
+  --green: #30D158;
+  --yellow: #FFD60A;
+  --scrim: rgba(0, 0, 0, .48);
+  --stage-top: #1C1C1E;
+  --stage-bottom: #0A0A0C;
+  --stage-shadow: rgba(0, 0, 0, .55);
+  --tint: #FF375F;
+  --glass-bg: color-mix(in srgb, #2C2C2E 58%, transparent);
+  --glass-bg-strong: color-mix(in srgb, #2C2C2E 80%, transparent);
+  --glass-edge: rgba(255, 255, 255, .12);
+  --glass-shadow: 0 8px 30px rgba(0, 0, 0, .40);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .3);
+  --shadow-2: 0 4px 16px rgba(0, 0, 0, .35);
+  --shadow-3: 0 18px 50px rgba(0, 0, 0, .55);
+}
+
+/* ---------- Tint-Varianten: html[data-tint="…"] (hell / dunkel) ---------- */
+:root[data-tint="rose"] { --tint: #FF2D55; }
+:root[data-tint="indigo"] { --tint: #5856D6; }
+:root[data-tint="blue"] { --tint: #007AFF; }
+:root[data-tint="mint"] { --tint: #00C7BE; }
+:root[data-tint="orange"] { --tint: #FF9500; }
+:root[data-tint="graphite"] { --tint: #8E8E93; }
+
+@media (prefers-color-scheme: dark) {
+  :root[data-tint="rose"]:not([data-appearance="light"]) { --tint: #FF375F; }
+  :root[data-tint="indigo"]:not([data-appearance="light"]) { --tint: #5E5CE6; }
+  :root[data-tint="blue"]:not([data-appearance="light"]) { --tint: #0A84FF; }
+  :root[data-tint="mint"]:not([data-appearance="light"]) { --tint: #63E6E2; }
+  :root[data-tint="orange"]:not([data-appearance="light"]) { --tint: #FF9F0A; }
+  :root[data-tint="graphite"]:not([data-appearance="light"]) { --tint: #98989D; }
+}
+:root[data-appearance="dark"][data-tint="rose"] { --tint: #FF375F; }
+:root[data-appearance="dark"][data-tint="indigo"] { --tint: #5E5CE6; }
+:root[data-appearance="dark"][data-tint="blue"] { --tint: #0A84FF; }
+:root[data-appearance="dark"][data-tint="mint"] { --tint: #63E6E2; }
+:root[data-appearance="dark"][data-tint="orange"] { --tint: #FF9F0A; }
+:root[data-appearance="dark"][data-tint="graphite"] { --tint: #98989D; }
+
+/* Mint ist hell: dunkle Schrift auf Tint-Flächen im Dunkelmodus */
+:root[data-appearance="dark"][data-tint="mint"] { --on-tint: #002B29; }
+@media (prefers-color-scheme: dark) {
+  :root[data-tint="mint"]:not([data-appearance="light"]) { --on-tint: #002B29; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 120ms;
+    --dur: 200ms;
+    --dur-slow: 240ms;
+    --spring-bounce: var(--ease-out);
+  }
+}

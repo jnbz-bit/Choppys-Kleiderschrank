@@ -114,22 +114,28 @@ function busyStep(f, { file, title, label }) {
   const textEl = el.querySelector('.scan-busy-text'), bar = el.querySelector('.scan-progress'), sub = el.querySelector('.scan-busy-sub');
   setProgress(bar, null);
 
-  let phase = 'prep', loadMax = 0, fakeRaf = 0, fakeStart = 0;
+  // Ein Balken für den ganzen Vorgang: Modell laden (falls nötig) 0–45 %, Ausschneiden danach bis max. 98 %.
+  // Der angezeigte Wert läuft nie rückwärts; dauert es lange, zeigt ein Lichtschimmer weiter Aktivität.
+  let phase = 'prep', fakeRaf = 0, fakeStart = 0, shown = 0, cutBase = 0.04, slowTimer = 0;
   const setText = (t, frac, note = '') => {
+    if (frac != null) { frac = Math.max(shown, Math.min(frac, 1)); shown = frac; }
     textEl.textContent = frac != null ? `${t} ${Math.round(frac * 100)}\u00a0%` : t;
     setProgress(bar, frac);
     if (sub.textContent !== note) sub.textContent = note;
   };
-  const stopFake = () => { cancelAnimationFrame(fakeRaf); fakeRaf = 0; };
+  const stopFake = () => { cancelAnimationFrame(fakeRaf); fakeRaf = 0; clearTimeout(slowTimer); bar.classList.remove('is-working'); };
   f.stopFake = stopFake;
   const startFake = () => {
     if (fakeRaf) return;
     fakeStart = performance.now();
+    cutBase = Math.max(cutBase, shown);
+    let note = '';
+    slowTimer = setTimeout(() => { note = 'Dauert etwas länger – gleich fertig.'; bar.classList.add('is-working'); }, 20000);
     const tick = () => {
       if (f.closed || !el.isConnected) return stopFake();
       const t = (performance.now() - fakeStart) / 1000;
-      const v = 0.04 + 0.92 * (1 - Math.exp(-t / 7)); // nähert sich ruhig 96 %
-      setText(label, v);
+      const v = cutBase + (0.98 - cutBase) * (1 - Math.exp(-t / 9)); // ruhig, nähert sich 98 %
+      setText(label, v, note);
       fakeRaf = requestAnimationFrame(tick);
     };
     tick();
@@ -141,8 +147,7 @@ function busyStep(f, { file, title, label }) {
       if (frac == null || frac === 0) { if (phase !== 'load') setText('Erkennung wird vorbereitet …', null); return; }
       phase = 'load';
       el.classList.add('is-loading-model');
-      loadMax = Math.max(loadMax, frac);
-      setText('Erkennung wird geladen …', loadMax, 'Nur beim ersten Mal (etwa 45 MB) – danach geht es schneller.');
+      setText('Erkennung wird geladen …', 0.45 * frac, 'Nur beim ersten Mal (etwa 45 MB) – danach geht es schneller.');
     } else if (/ausgeschnitten/i.test(text)) {
       if (phase !== 'cut') { phase = 'cut'; el.classList.remove('is-loading-model'); startFake(); }
     } else if (phase === 'prep') setText('Foto wird vorbereitet …', null);

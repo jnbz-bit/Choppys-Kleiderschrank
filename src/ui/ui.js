@@ -237,6 +237,8 @@ function makeLayer(z) {
   const layer = document.createElement('div');
   layer.className = 'overlay-layer';
   layer.style.zIndex = String(200 + z * 10);
+  // Fallback für Browser ohne overflow: clip – Ebene darf nie verschoben werden
+  layer.addEventListener('scroll', () => { if (layer.scrollTop || layer.scrollLeft) layer.scrollTop = layer.scrollLeft = 0; }, { passive: true });
   document.body.appendChild(layer);
   return layer;
 }
@@ -696,6 +698,7 @@ export function alert({ title = '', message = '', buttons, input = null, dismiss
       const b = e.target.closest('.btn[data-i]');
       if (!b) return;
       const spec = btns[+b.dataset.i];
+      spec.onTap?.(); // synchron im Klick (z. B. navigator.share braucht die Nutzeraktion)
       finish(spec.value !== undefined ? spec.value : spec.label);
     });
     field?.addEventListener('keydown', (e) => {
@@ -958,6 +961,40 @@ export function bindLongPress(el, fn, { delay = 500, selector = null } = {}) {
     el.removeEventListener('selectstart', sel);
     window.removeEventListener('scroll', cancel, { capture: true });
   };
+}
+
+// =====================================================================
+// Teilen (iOS: navigator.share nur mit frischer Nutzeraktion)
+// =====================================================================
+/**
+ * Teilt Dateien über das Teilen-Menü. Safari verweigert share() (NotAllowedError), wenn seit dem Tippen
+ * zu viel Zeit vergangen ist (z. B. nach dem Erzeugen einer großen Datei) – dann fragt ein Alert erneut,
+ * und das Tippen auf „Teilen“ ist wieder eine direkte Nutzeraktion.
+ * → 'shared' | 'aborted' | 'unsupported'
+ */
+export async function shareFiles(files, { title = '', readyTitle = 'Bereit zum Teilen' } = {}) {
+  if (!navigator.canShare?.({ files })) return 'unsupported';
+  const attempt = async () => {
+    try { await navigator.share({ files, title }); return 'shared'; } catch (e) {
+      if (e?.name === 'AbortError') return 'aborted';
+      if (e?.name === 'NotAllowedError') return 'retry';
+      console.warn(e);
+      return 'unsupported';
+    }
+  };
+  const r = await attempt();
+  if (r !== 'retry') return r;
+  let result = 'aborted';
+  await alert({
+    title: readyTitle,
+    buttons: [
+      { label: 'Abbrechen', value: false },
+      { label: 'Teilen', value: true, bold: true, onTap: () => { result = attempt(); } }
+    ],
+    dismissValue: false
+  });
+  const final = await result;
+  return final === 'retry' ? 'unsupported' : final;
 }
 
 // =====================================================================

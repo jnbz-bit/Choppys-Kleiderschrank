@@ -681,6 +681,7 @@ button.card[data-pressed], .card.is-pressable[data-pressed] { --press: .97; tran
   height: var(--vv-h, 100dvh);
   z-index: 200;
   overflow: hidden;
+  overflow: clip; /* nie programmatisch scrollbar (scrollIntoView/Fokus würden sonst das ganze Sheet verschieben) */
   pointer-events: none;
 }
 .overlay-layer > * { pointer-events: auto; }
@@ -929,9 +930,9 @@ button.card[data-pressed], .card.is-pressable[data-pressed] { --press: .97; tran
   will-change: transform, opacity;
   pointer-events: auto;
 }
-/* Position: oben unter der Statusleiste (verdeckt weder Auswahlleiste noch Tab-Leiste);
-   bei offenem großen Sheet direkt unter dessen Kopfzeile (innerhalb, nie über Abbrechen/Fertig). */
-.toast.is-top { top: calc(var(--safe-t) + 8px); }
+/* Position: oben direkt unter der Kopf-/Navigationsleiste (verdeckt weder deren Knöpfe noch
+   Auswahlleiste oder Tab-Leiste); bei offenem großen Sheet unter dessen Kopfzeile (innerhalb). */
+.toast.is-top { top: calc(var(--safe-t) + var(--nav-h) + 12px); }
 .toast.is-in-sheet { top: calc(var(--sheet-gap-top) + 10px + 70px); }
 .toast.is-bottom { bottom: calc(var(--tabbar-bottom) + var(--tabbar-h) + 14px); }
 .toast.has-icon { padding-left: 14px; }

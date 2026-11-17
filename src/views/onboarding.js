@@ -1,6 +1,6 @@
 // Willkommen / Onboarding (bildschirmfüllend über der App) + dezenter Installations-Hinweis.
 import './onboarding.css';
-import { S, once, setSetting, isStandalone, persistSettings } from '../app/state.js';
+import { S, on, once, setSetting, isStandalone, persistSettings } from '../app/state.js';
 import { register, run } from '../app/actions.js';
 import { h, haptic, springAnimate, sheet, overlayOpen, prefersReducedMotion, wait } from '../ui/ui.js';
 import { I } from '../ui/icons.js';
@@ -221,6 +221,11 @@ function hideCard() {
 function showInstallCard({ force = false } = {}) {
   if (card || active) return;
   if (!force && (isStandalone() || S.settings.hideInstall || !S.settings.onboarded)) return;
+  // In der Anprobe läge die Karte über der Auswahlleiste: erst beim nächsten Wechsel in Schrank/Outfits zeigen
+  if (!force && S.tab === 'spiegel') {
+    const off = on('tab', ({ tab }) => { if (tab !== 'spiegel') { off(); setTimeout(() => { if (!overlayOpen()) showInstallCard(); }, 600); } });
+    return;
+  }
   card = h(`<div class="onb-card glass" role="status">
     <button type="button" class="onb-card-main" data-act="how">
       <span class="onb-card-icon">${I.share}</span>
@@ -245,6 +250,7 @@ register('showInstallHint', (o) => showInstallCard({ force: true, ...o }));
 export default {
   id: 'onboarding',
   init() {
+    on('tab', ({ tab }) => { if (tab === 'spiegel') hideCard(); });
     // Einmal beim Start, frühestens nach dem Onboarding, höchstens alle 3 Tage, nicht über offenen Sheets.
     (async () => {
       await wait(2600);

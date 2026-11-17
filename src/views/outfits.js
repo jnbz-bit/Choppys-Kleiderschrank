@@ -7,7 +7,7 @@ import {
 import { register, run, go } from '../app/actions.js';
 import {
   pageScaffold, emptyState, sheet, actionSheet, alert, toast, contextMenu, bindLongPress, haptic, segmented,
-  springAnimate, transition, h, esc, prefersReducedMotion
+  springAnimate, transition, h, esc, prefersReducedMotion, shareFiles
 } from '../ui/ui.js';
 import { I } from '../ui/icons.js';
 import { WEEKDAYS, CAT } from '../model.js';
@@ -36,17 +36,23 @@ function daysHTML(days, cls = '') {
 // =====================================================================
 // Teilen / Anziehen / Löschen (gemeinsam für Detail, Kontextmenü)
 // =====================================================================
+// Bild-Blobs vorab holen, damit share() beim Tippen ohne Wartezeit läuft (iOS braucht die direkte Nutzeraktion)
+const shareBlobs = new Map(); // url → Blob
+function prefetchShare(id) {
+  const url = outfitUrl(id);
+  if (!url || shareBlobs.has(url)) return;
+  fetch(url).then((r) => r.blob()).then((b) => { shareBlobs.set(url, b); if (shareBlobs.size > 12) shareBlobs.delete(shareBlobs.keys().next().value); }).catch(() => {});
+}
 async function shareOutfit(id) {
   const o = outfitById(id);
   const url = outfitUrl(id);
   if (!o || !url) return;
   try {
-    const blob = await (await fetch(url)).blob();
-    const fname = `${(o.name || 'Outfit').replace(/[\\/:*?"<>|]+/g, '').trim() || 'Outfit'}.jpg`;
+    const blob = shareBlobs.get(url) || await (await fetch(url)).blob();
+    const fname = `${(o.name || 'Outfit').replace(/[\\/:*?"<>|]+/g, '').replace(/[.\s]+$/, '').trim() || 'Outfit'}.jpg`;
     const file = new File([blob], fname, { type: blob.type || 'image/jpeg' });
-    if (navigator.canShare?.({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: o.name }); return; } catch (e) { if (e.name === 'AbortError') return; }
-    }
+    const r = await shareFiles([file], { title: o.name });
+    if (r !== 'unsupported') return;
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = fname;
@@ -86,10 +92,28 @@ async function askDelete(id) {
 // =====================================================================
 // Outfit-Detail
 // =====================================================================
+const missingHTML = (missing) => missing ? `<div class="banner is-solid outfits-missing"><span class="banner-icon">${I.warning}</span><span class="banner-body"><span class="banner-title">${missing === 1 ? 'Ein Teil fehlt' : `${missing} Teile fehlen`}</span><span class="banner-text">${missing === 1 ? 'Es ist' : 'Sie sind'} nicht mehr im Schrank und ${missing === 1 ? 'wird' : 'werden'} beim Anziehen weggelassen.</span></span></div>` : '';
+/** Offenes Detail nachziehen, wenn ein Teil gelöscht wurde (z. B. aus dem darübergelegten Teil-Detail). */
+function syncDetailPieces() {
+  if (!detail) return;
+  const o = outfitById(detail.id);
+  const root = detail.sheet.body;
+  if (!o) return;
+  root.querySelectorAll('.outfits-piece').forEach((b) => { if (!itemById(b.dataset.item)) b.remove(); });
+  const n = LAYER_ORDER.map((c) => itemById(o.sel?.[c])).filter(Boolean).length;
+  const meta = root.querySelector('.outfits-meta');
+  if (meta) meta.textContent = meta.textContent.replace(/^\d+ Teile?/, plural(n, 'Teil', 'Teile'));
+  const m = missingIn(o);
+  const old = root.querySelector('.outfits-missing');
+  const html = missingHTML(m);
+  if (old) old.outerHTML = html || '';
+  else if (html) root.querySelector('.outfits-actions')?.insertAdjacentHTML('afterend', html);
+}
 let detail = null; // {id, sheet}
 function openOutfit(id) {
   const o = outfitById(id);
   if (!o) return;
+  prefetchShare(id);
   const missing = missingIn(o);
   const pieces = LAYER_ORDER.map((c) => itemById(o.sel?.[c])).filter(Boolean);
   const created = new Date(o.created || Date.now()).toLocaleDateString('de-DE', { day: 'numeric', month: 'long' });
@@ -103,7 +127,7 @@ function openOutfit(id) {
       <button type="button" class="btn btn-filled btn-large" data-act="wear">${I.mirror}<span>Anziehen</span></button>
       <button type="button" class="btn btn-gray btn-large" data-act="share">${I.share}<span>Teilen</span></button>
     </div>
-    ${missing ? `<div class="banner is-solid outfits-missing"><span class="banner-icon">${I.warning}</span><span class="banner-body"><span class="banner-title">${missing === 1 ? 'Ein Teil fehlt' : `${missing} Teile fehlen`}</span><span class="banner-text">${missing === 1 ? 'Es ist' : 'Sie sind'} nicht mehr im Schrank und ${missing === 1 ? 'wird' : 'werden'} beim Anziehen weggelassen.</span></span></div>` : ''}
+    ${missingHTML(missing)}
     <div class="list">
       <div class="list-header">Tragen am</div>
       <div class="list-group outfits-days-group">${daysHTML(o.days || [])}</div>
@@ -477,6 +501,7 @@ export default {
     });
     bindLongPress(gridEl, (card) => {
       const id = card.dataset.id;
+      prefetchShare(id);
       contextMenu(card, { actions: [
         { label: 'Anziehen', icon: I.mirror, onTap: () => wear(id) },
         { label: 'Teilen', icon: I.share, onTap: () => shareOutfit(id) },
@@ -500,7 +525,7 @@ export default {
         update({ animate: !ev?.reloaded });
       }),
       on('thumb', ({ id, url }) => swapThumb(id, url)),
-      on('items', (ev) => { if (ev?.reloaded) update({ animate: false }); refresh(); }),
+      on('items', (ev) => { if (ev?.reloaded) update({ animate: false }); if (ev?.removed) syncDetailPieces(); refresh(); }),
       on('body', refresh),
       on('settings', ({ key }) => { if (key === 'warp' || key === 'reloaded') refresh(); })
     );

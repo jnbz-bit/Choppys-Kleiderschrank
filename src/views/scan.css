@@ -134,6 +134,17 @@
   min-height: 22px;
 }
 .scan-progress { max-width: 320px; margin: 0 auto; }
+/* lange Dauer: dezenter Lichtschimmer läuft über den Balken */
+.scan-progress.is-working > i::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, .55) 50%, transparent 100%);
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  animation: scan-bar-sheen 1.6s ease-in-out infinite;
+}
+@keyframes scan-bar-sheen { from { background-position: -40% 0; } to { background-position: 140% 0; } }
+@media (prefers-reduced-motion: reduce) { .scan-progress.is-working > i::after { animation: none; } }
 .scan-busy-sub {
   min-height: 20px;
   margin-top: 10px;
@@ -369,9 +380,18 @@
 .scan-width .slider-row { min-height: 36px; }
 
 @media (max-height: 700px) {
-  .scan-features { gap: 16px; padding-top: 22px; }
-  .scan-hero-icon { width: 64px; height: 64px; margin-bottom: 12px; }
-  .scan-hero-icon svg { width: 36px; height: 36px; }
+  .scan-hero { padding-top: 0; }
+  .scan-hero-title { font: var(--text-title2); letter-spacing: var(--track-title2); }
+  .scan-hero-text { font: var(--text-subhead); letter-spacing: var(--track-subhead); margin-top: 4px; }
+  .scan-features { gap: 14px; padding-top: 18px; }
+  .scan-features .feature-row .feature-title { font-size: 16px; line-height: 21px; }
+  .scan-features .feature-row .feature-text { font: var(--text-footnote); letter-spacing: var(--track-footnote); }
+  .scan-features .feature-row > svg { width: 26px; height: 26px; }
+  .scan-hero-icon { width: 56px; height: 56px; margin-bottom: 10px; border-radius: 18px; }
+  .scan-hero-icon svg { width: 32px; height: 32px; }
+  .scan-bottom { padding-top: 16px; }
+  .scan-buttons .btn-large { --btn-h: 48px; }
+  .scan-footnote { margin-top: 8px; }
   .scan-busy-media { height: 38vh; }
   .scan-result-stage { height: 32vh; min-height: 180px; }
 }

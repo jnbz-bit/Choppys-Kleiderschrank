@@ -98,6 +98,7 @@ input, textarea, select { font-size: max(16px, 1em); }
   position: fixed;
   inset: 0;
   overflow: hidden;
+  overflow: clip;
   background: var(--bg);
   transform-origin: 50% 0;
   translate: 0 0;
@@ -119,6 +120,7 @@ html.has-page-sheet #app {
   position: absolute;
   inset: 0;
   overflow: hidden;
+  overflow: clip;
   opacity: 1;
   transition: opacity 200ms var(--ease-out), visibility 0s;
 }

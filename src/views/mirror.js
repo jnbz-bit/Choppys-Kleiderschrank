@@ -365,7 +365,9 @@ function renderChips() {
   }).join('');
   if (chipsEl.innerHTML !== html) chipsEl.innerHTML = html;
 }
+let shownCat = null;
 function syncChipSelection(scroll = true) {
+  shownCat = S.cat;
   chipsEl.querySelectorAll('.chip').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cat === S.cat)));
   const act = chipsEl.querySelector('[aria-pressed="true"]');
   if (scroll && act) centerIn(chipsEl, act, true);
@@ -943,6 +945,8 @@ function onSel({ changed = LAYER_ORDER } = {}) {
   nextAnim = null;
   if (adjusting && !adjustItem()) exitAdjust({ silent: true });
   drawLayers(changed, anim);
+  // Kategorie kann von außen gewechselt worden sein (Scannen, Schrank „Anprobieren“): Auswahl-Panel nachziehen
+  if (shownCat !== S.cat || stripSig !== stripSignature()) { refreshPicker({ smooth: visible() }); return syncBanner(); }
   syncStripSelection(true);
   syncTools();
   syncBanner();

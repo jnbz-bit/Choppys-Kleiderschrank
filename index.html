@@ -10,7 +10,10 @@
     <meta name="color-scheme" content="light dark" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- „default“ statt „black-translucent“: translucent erzwingt WEISSE Statusleisten-Schrift über unserem
+         hellen Inhalt (unlesbar). Mit „default“ zeichnet iOS die Leiste passend zum Erscheinungsbild
+         (dunkle Schrift hell, helle Schrift dunkel); der Inhalt beginnt darunter, safe-area-inset-top ist dann 0. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Schrank" />
     <meta name="format-detection" content="telephone=no" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />

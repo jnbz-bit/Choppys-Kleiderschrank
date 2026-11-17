@@ -2,7 +2,7 @@
 import './settings.css';
 import { S, on, setSetting, TINTS, APPEARANCES, warpOn, isStandalone, isDark, urls, boot } from '../app/state.js';
 import { register, run } from '../app/actions.js';
-import { sheet, h, esc, segmented, haptic, toast, confirm, alert, springAnimate } from '../ui/ui.js';
+import { sheet, h, esc, segmented, haptic, toast, confirm, alert, springAnimate, shareFiles } from '../ui/ui.js';
 import { I } from '../ui/icons.js';
 import { storageInfo, exportBackup, importBackup, requestPersistence } from '../db.js';
 import { SILHOUETTE } from '../silhouette.js';
@@ -20,9 +20,8 @@ export async function doExport() {
     const name = `kleiderschrank-${new Date().toISOString().slice(0, 10)}.json`;
     const file = new File([blob], name, { type: 'application/json' });
     t.close(true);
-    if (navigator.canShare?.({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: 'Kleiderschrank-Sicherung' }); return; } catch (e) { if (e.name === 'AbortError') return; }
-    }
+    const r = await shareFiles([file], { title: 'Kleiderschrank-Sicherung', readyTitle: 'Sicherung ist bereit' });
+    if (r !== 'unsupported') return;
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = name;
@@ -30,7 +29,7 @@ export async function doExport() {
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-    toast('Sicherung gesichert', { icon: I.checkCircleFill });
+    toast('Sicherung erstellt', { icon: I.checkCircleFill });
   } catch (e) {
     t.close(true);
     console.error(e);

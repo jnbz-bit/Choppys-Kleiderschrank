@@ -41,14 +41,14 @@
   color: var(--label);
   white-space: nowrap;
 }
+/* Knöpfe auf derselben Höhe und in derselben Größe wie in den Navigationsleisten von Schrank/Outfits */
 .mirror-head-actions {
   display: flex;
   gap: 10px;
-  padding-bottom: 1px;
+  align-self: flex-start;
+  margin-top: -6px;
   transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur) var(--spring);
 }
-.mirror-head .mirror-icon-btn { --size: 40px; }
-.mirror-head .mirror-icon-btn svg { width: 20px; height: 20px; }
 .mirror.is-adjusting .mirror-head-actions { opacity: 0; transform: scale(.8); pointer-events: none; }
 
 /* ---------- Banner ---------- */
@@ -382,11 +382,23 @@
 /* Kleine Bildschirme (iPhone SE) */
 @media (max-height: 700px) {
   .mirror-head { padding-top: calc(var(--safe-t) + 6px); }
+  .mirror-head-actions { margin-top: -2px; }
   .mirror-title { font: var(--text-title2); letter-spacing: var(--track-title2); }
-  .mirror-panel { padding-top: 10px; }
-  .mirror-strip-row { height: 72px; }
-  .mirror-thumb { width: 56px; height: 56px; }
-  .mirror-wrap { padding-top: 6px; }
+  /* Banner einzeilig, damit die Figur Platz behält */
+  .mirror-banner-slot { padding-top: 6px; }
+  .mirror-banner { min-height: 48px; padding: 6px 6px 6px 10px; }
+  .mirror-banner .banner-icon { width: 30px; height: 30px; }
+  .mirror-banner .banner-icon svg { width: 18px; height: 18px; }
+  .mirror-banner .banner-icon.has-image { width: 34px; height: 34px; border-radius: 10px; }
+  .mirror-banner .banner-text:not(.mirror-banner-name) { display: none; }
+  .mirror-wrap { padding-top: 4px; padding-bottom: 4px; }
+  .mirror-tools { gap: 8px; top: 4px; }
+  .mirror-tools .mirror-icon-btn { --size: 40px; }
+  .mirror-panel { padding-top: 8px; padding-bottom: 6px; }
+  .mirror-chips .chip { height: 32px; padding: 0 12px; font-size: 14px; }
+  .mirror-strip-row { height: 66px; margin-top: 2px; }
+  .mirror-thumb { width: 54px; height: 54px; border-radius: 16px; }
+  .mirror-bottom { height: calc(var(--tabbar-h) + var(--tabbar-bottom) + 8px); }
 }
 
 /* Kacheln im Dunkeln etwas heller als das Glas */

@@ -403,6 +403,6 @@
 
 /* Kacheln im Dunkeln: gemeinsame Kachelfläche, ohne Schatten */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-appearance="light"]) .mirror-thumb:not(.is-none) { box-shadow: none; }
+  :root:not([data-appearance="light"]) .mirror-thumb:not(.is-none):not([aria-selected="true"]) { box-shadow: none; }
 }
-:root[data-appearance="dark"] .mirror-thumb:not(.is-none) { box-shadow: none; }
+:root[data-appearance="dark"] .mirror-thumb:not(.is-none):not([aria-selected="true"]) { box-shadow: none; }

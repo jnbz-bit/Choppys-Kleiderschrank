@@ -466,11 +466,11 @@ function drawBody() {
   // Haare vorne
   ctx.save(); ctx.fillStyle = '#4A352B';
   ctx.beginPath(); ctx.moveTo(228, 160); ctx.quadraticCurveTo(230, 40, 320, 44); ctx.quadraticCurveTo(398, 50, 394, 160); ctx.quadraticCurveTo(360, 90, 300, 96); ctx.quadraticCurveTo(250, 104, 228, 160); ctx.fill(); ctx.restore();
-  // Basics (anthrazit)
+  // Basics (helles Beige, wie Unterwäsche/Sportoberteil – kein harter dunkler Streifen unter kurzen Teilen)
   const top = P('M180 318 Q310 300 440 318 Q450 380 440 470 Q310 490 180 470 Q170 380 180 318 Z');
-  fabric(ctx, top, '#4A4A50', { hex: '#4A4A50', folds: 1, box: { x: 170, y: 300, w: 280, h: 190 } });
+  fabric(ctx, top, '#D8CCC0', { hex: '#D8CCC0', folds: 1, box: { x: 170, y: 300, w: 280, h: 190 } });
   const bottom = P('M206 640 Q310 628 414 640 L426 780 Q430 860 420 900 L322 900 L310 860 L298 900 L200 900 Q190 860 194 780 Z');
-  fabric(ctx, bottom, '#4A4A50', { hex: '#4A4A50', folds: 1, box: { x: 190, y: 628, w: 240, h: 272 } });
+  fabric(ctx, bottom, '#D8CCC0', { hex: '#D8CCC0', folds: 1, box: { x: 190, y: 628, w: 240, h: 272 } });
   // Schuhe
   ctx.save(); ctx.fillStyle = '#EDEDED';
   ctx.beginPath(); ctx.ellipse(244, 1460, 40, 30, 0.2, 0, Math.PI * 2); ctx.ellipse(376, 1460, 40, 30, -0.2, 0, Math.PI * 2); ctx.fill(); ctx.restore();

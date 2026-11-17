@@ -203,7 +203,7 @@
   width: 40px; height: 40px;
   display: grid; place-items: center;
   border-radius: 50%;
-  background: var(--bg-elevated);
+  background: var(--bg-group);
   color: var(--yellow, #FFCC00);
   box-shadow: 0 4px 12px rgba(0, 0, 0, .14);
 }
@@ -347,7 +347,7 @@
   margin-top: 14px;
   padding: 12px 16px 10px;
   border-radius: var(--r-l);
-  background: var(--bg-elevated);
+  background: var(--bg-group);
 }
 .scan-width-head {
   display: flex;
@@ -367,14 +367,6 @@
   text-overflow: ellipsis;
 }
 .scan-width .slider-row { min-height: 36px; }
-
-/* dunkles Sheet: Gruppen eine Stufe heller */
-html[data-appearance="dark"] .scan-sheet .list-group,
-html[data-appearance="dark"] .scan-sheet .scan-width { background: var(--bg-tertiary); }
-@media (prefers-color-scheme: dark) {
-  html:not([data-appearance="light"]) .scan-sheet .list-group,
-  html:not([data-appearance="light"]) .scan-sheet .scan-width { background: var(--bg-tertiary); }
-}
 
 @media (max-height: 700px) {
   .scan-features { gap: 16px; padding-top: 22px; }

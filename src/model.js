@@ -36,10 +36,13 @@ export function zoneBox(cat, g, W, H) {
   const F = Math.max(A + l * 0.07, g.floor * H);
   const bw = g.w * W; // Körperbreite inkl. Arme
   const cx = g.cx * W;
+  // Oberteile/Jacken/Kleider liegen beim Scannen flach mit ausgebreiteten Ärmeln: Ihr Rahmen ist real
+  // ca. 1,4–1,7× so breit wie der Körper mit hängenden Armen (bw). Mit 1,0× wurden sie zu klein und damit
+  // zu kurz (T-Shirt endete über dem Bauch). Die Höhe begrenzt weiterhin (schmale Teile wie Tops).
   const box = {
-    oberteil: { top: S - t * 0.1, bottom: Hp + t * 0.22, width: bw * 1.0, anchor: 'top' },
-    jacke: { top: S - t * 0.12, bottom: Hp + t * 0.4, width: bw * 1.12, anchor: 'top' },
-    kleid: { top: S - t * 0.08, bottom: Hp + l * 0.8, width: bw * 1.02, anchor: 'top' },
+    oberteil: { top: S - t * 0.1, bottom: Hp + t * 0.22, width: bw * 1.5, anchor: 'top' },
+    jacke: { top: S - t * 0.12, bottom: Hp + t * 0.4, width: bw * 1.6, anchor: 'top' },
+    kleid: { top: S - t * 0.08, bottom: Hp + l * 0.8, width: bw * 1.45, anchor: 'top' },
     hose: { top: Hp - t * 0.1, bottom: A + l * 0.04, width: bw * 0.78, anchor: 'top' },
     socken: { top: A - l * 0.24, bottom: F, width: bw * 0.5, anchor: 'bottom' },
     schuhe: { top: A - l * 0.08, bottom: F + l * 0.01, width: bw * 0.72, anchor: 'bottom' },

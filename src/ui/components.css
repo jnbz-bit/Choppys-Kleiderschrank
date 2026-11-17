@@ -319,11 +319,13 @@ input.slider::-moz-range-thumb { width: 28px; height: 28px; border: 0; border-ra
   padding: 0 4px 10px;
 }
 .list-group {
-  background: var(--bg-elevated);
+  background: var(--bg-group);
   border-radius: var(--r-l);
   overflow: hidden;
 }
 .on-elevated .list-group, .sheet.is-plain .list-group { background: var(--bg-tertiary); }
+/* Sheets: Grund = gruppierter Hintergrund, Gruppen/Karten darauf = erhöhte Fläche (iOS: dunkel #2C2C2E) */
+.sheet { --bg-group: var(--bg-sheet-group); }
 .list-footer {
   padding: 7px 16px 0;
   font: var(--text-footnote);
@@ -468,7 +470,7 @@ button.card[data-pressed], .card.is-pressable[data-pressed] { --press: .97; tran
   backdrop-filter: var(--glass-blur);
   box-shadow: var(--glass);
 }
-.banner.is-solid { background: var(--bg-elevated); box-shadow: var(--shadow-1); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.banner.is-solid { background: var(--bg-group); box-shadow: var(--shadow-1); -webkit-backdrop-filter: none; backdrop-filter: none; }
 .banner-icon {
   width: 36px; height: 36px; flex-shrink: 0;
   display: grid; place-items: center;
@@ -649,7 +651,7 @@ button.card[data-pressed], .card.is-pressable[data-pressed] { --press: .97; tran
   transform: scale(var(--press, 1));
   transition: transform 380ms var(--spring-bounce), box-shadow var(--dur-fast);
 }
-.swatch[aria-pressed="true"] { box-shadow: 0 0 0 2.5px var(--bg-elevated), 0 0 0 4.5px var(--c); }
+.swatch[aria-pressed="true"] { box-shadow: 0 0 0 2.5px var(--bg-group), 0 0 0 4.5px var(--c); }
 .swatch[data-pressed] { --press: .88; transition-duration: 90ms; }
 
 /* ---------- Tages-Knöpfe (Mo–So) ---------- */
@@ -714,9 +716,10 @@ button.card[data-pressed], .card.is-pressable[data-pressed] { --press: .97; tran
   bottom: max(8px, var(--safe-b));
   max-height: min(64%, 620px);
   border-radius: 36px;
-  background: var(--glass-bg-strong);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
-  backdrop-filter: blur(30px) saturate(180%);
+  /* Glas, aber deckend genug: darunterliegende Bedienelemente (Tab-Leiste) dürfen nicht lesbar durchscheinen */
+  background: var(--glass-sheet);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(40px) saturate(180%);
   box-shadow: inset 0 0 0 .5px var(--glass-edge), 0 10px 40px rgba(0, 0, 0, .18);
 }
 .kb-open .overlay-layer .sheet.is-medium { bottom: 8px; max-height: calc(100% - 16px); }
@@ -790,9 +793,9 @@ button.card[data-pressed], .card.is-pressable[data-pressed] { --press: .97; tran
 .as-group {
   border-radius: var(--r-xl);
   overflow: hidden;
-  background: var(--glass-bg-strong);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
-  backdrop-filter: blur(30px) saturate(180%);
+  background: var(--glass-solid);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(40px) saturate(180%);
   box-shadow: inset 0 0 0 .5px var(--glass-edge), 0 10px 40px rgba(0, 0, 0, .14);
 }
 .as-header { padding: 15px 20px 13px; text-align: center; color: var(--label-2); }
@@ -832,7 +835,7 @@ button.card[data-pressed], .card.is-pressable[data-pressed] { --press: .97; tran
   max-width: 100%;
   padding: 22px 18px 16px;
   border-radius: 32px;
-  background: var(--glass-bg-strong);
+  background: var(--glass-solid);
   -webkit-backdrop-filter: blur(30px) saturate(180%);
   backdrop-filter: blur(30px) saturate(180%);
   box-shadow: inset 0 0 0 .5px var(--glass-edge), 0 20px 60px rgba(0, 0, 0, .25);
@@ -874,9 +877,9 @@ button.card[data-pressed], .card.is-pressable[data-pressed] { --press: .97; tran
   width: 250px;
   border-radius: var(--r-l);
   overflow: hidden;
-  background: var(--glass-bg-strong);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
-  backdrop-filter: blur(30px) saturate(180%);
+  background: var(--glass-solid);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(40px) saturate(180%);
   box-shadow: inset 0 0 0 .5px var(--glass-edge), 0 12px 40px rgba(0, 0, 0, .18);
   opacity: 0;
   will-change: transform, opacity;
@@ -910,11 +913,11 @@ button.card[data-pressed], .card.is-pressable[data-pressed] { --press: .97; tran
   display: flex;
   align-items: center;
   gap: 10px;
-  max-width: calc(100vw - 32px);
+  max-width: min(calc(100vw - 32px), 400px);
   min-height: 48px;
   padding: 6px 20px;
   border-radius: var(--r-capsule);
-  background: var(--glass-bg-strong);
+  background: var(--glass-solid);
   -webkit-backdrop-filter: blur(30px) saturate(180%);
   backdrop-filter: blur(30px) saturate(180%);
   box-shadow: inset 0 0 0 .5px var(--glass-edge), 0 10px 34px rgba(0, 0, 0, .16);
@@ -926,8 +929,11 @@ button.card[data-pressed], .card.is-pressable[data-pressed] { --press: .97; tran
   will-change: transform, opacity;
   pointer-events: auto;
 }
+/* Position: oben unter der Statusleiste (verdeckt weder Auswahlleiste noch Tab-Leiste);
+   bei offenem großen Sheet direkt unter dessen Kopfzeile (innerhalb, nie über Abbrechen/Fertig). */
+.toast.is-top { top: calc(var(--safe-t) + 8px); }
+.toast.is-in-sheet { top: calc(var(--sheet-gap-top) + 10px + 70px); }
 .toast.is-bottom { bottom: calc(var(--tabbar-bottom) + var(--tabbar-h) + 14px); }
-.toast.is-top { top: calc(var(--safe-t) + 10px); }
 .toast.has-icon { padding-left: 14px; }
 .toast-icon { width: 22px; height: 22px; color: var(--tint); display: grid; place-items: center; }
 .toast-icon svg { width: 22px; height: 22px; }
@@ -943,6 +949,9 @@ button.card[data-pressed], .card.is-pressable[data-pressed] { --press: .97; tran
   transition: transform 300ms var(--spring-bounce), background-color 200ms;
 }
 .toast-action[data-pressed] { --press: .92; background: var(--fill-3); transition-duration: 80ms; }
+
+/* Während des Kontextmenüs keine Textauswahl / kein iOS-Callout */
+html.cm-open, html.cm-open * { -webkit-user-select: none !important; user-select: none !important; -webkit-touch-callout: none !important; }
 
 /* ---------- Kleinteile ---------- */
 .divider { height: var(--hairline); background: var(--separator); margin: 0 var(--gap); }

@@ -52,12 +52,3 @@
 .settings-about-name { font: var(--text-headline); letter-spacing: var(--track-body); }
 .settings-privacy { display: flex; align-items: center; gap: 6px; }
 .settings-privacy svg { width: 14px; height: 14px; flex-shrink: 0; }
-
-/* Gruppen im Sheet: im Dunkelmodus eine Stufe heller als der Sheet-Grund (wie iOS) */
-.settings-sheet { --settings-group: var(--bg-elevated); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-appearance="light"]) .settings-sheet { --settings-group: var(--bg-tertiary); }
-}
-:root[data-appearance="dark"] .settings-sheet { --settings-group: var(--bg-tertiary); }
-.settings-sheet .list-group { background: var(--settings-group); }
-.settings-sheet .swatch[aria-pressed="true"] { box-shadow: 0 0 0 2.5px var(--settings-group), 0 0 0 4.5px var(--c); }

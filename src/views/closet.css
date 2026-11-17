@@ -110,7 +110,7 @@
   min-height: 66px;
   padding: 10px 4px 9px;
   border-radius: var(--r-m);
-  background: var(--bg-elevated);
+  background: var(--bg-group);
   color: var(--tint);
   font: 500 12px/16px var(--font);
   letter-spacing: var(--track-caption);
@@ -132,11 +132,3 @@
 .closet-detail-body > .list { padding: 0; }
 .closet-color { display: inline-flex; align-items: center; gap: 8px; }
 .closet-color .color-dot { width: 16px; height: 16px; }
-
-/* Gruppen im dunklen Sheet eine Stufe heller (sonst gleich wie der Sheet-Grund) */
-html[data-appearance="dark"] .closet-detail .list-group,
-html[data-appearance="dark"] .closet-detail .closet-action:not(.is-primary) { background: var(--bg-tertiary); }
-@media (prefers-color-scheme: dark) {
-  html:not([data-appearance="light"]) .closet-detail .list-group,
-  html:not([data-appearance="light"]) .closet-detail .closet-action:not(.is-primary) { background: var(--bg-tertiary); }
-}

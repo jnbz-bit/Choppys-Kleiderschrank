@@ -202,7 +202,7 @@
 /* Hilfe-Sheet (Installations-Anleitung) */
 .onb-help { display: flex; flex-direction: column; align-items: center; padding-top: 6px; }
 .onb-help .onb-lead { font: var(--text-subhead); letter-spacing: var(--track-subhead); margin-top: 6px; }
-.onb-help .onb-steps { margin-top: 18px; background: var(--bg-elevated); }
+.onb-help .onb-steps { margin-top: 18px; background: var(--bg-group); }
 .onb-help-hide { margin-top: 10px; font-weight: 400; color: var(--label-2); }
 
 /* Dezente Karte (Installations-Hinweis) */

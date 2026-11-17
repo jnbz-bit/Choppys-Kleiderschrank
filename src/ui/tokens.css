@@ -40,7 +40,9 @@
   --bg-elevated: #FFFFFF;           /* Karten, Gruppen, Sheets */
   --bg-secondary: #FFFFFF;
   --bg-tertiary: #F2F2F7;           /* Fläche in einer Gruppe */
-  --bg-sheet: #F2F2F7;              /* Grund eines großen Sheets (grouped) */
+  --bg-sheet: #F2F2F7;              /* Grund eines Sheets (grouped) */
+  --bg-sheet-group: #FFFFFF;        /* Gruppen/Karten auf dem Sheet-Grund */
+  --bg-group: var(--bg-elevated);   /* Gruppen/Karten im aktuellen Kontext (in Sheets umgestellt) */
   --fill: rgba(120, 120, 128, .20);
   --fill-2: rgba(120, 120, 128, .16);
   --fill-3: rgba(118, 118, 128, .12);
@@ -77,6 +79,8 @@
   /* ---------- Glas ---------- */
   --glass-bg: color-mix(in srgb, var(--bg-elevated) 62%, transparent);
   --glass-bg-strong: color-mix(in srgb, var(--bg-elevated) 86%, transparent);
+  --glass-sheet: color-mix(in srgb, var(--bg-sheet) 94%, transparent);   /* halbhohe Sheets */
+  --glass-solid: color-mix(in srgb, var(--bg-elevated) 94%, transparent); /* Menüs, Action Sheets, Alerts, HUD */
   --glass-blur: blur(24px) saturate(180%);
   --glass-edge: rgba(255, 255, 255, .5);
   --glass-shadow: 0 8px 30px rgba(0, 0, 0, .12);
@@ -147,6 +151,7 @@
     --bg-secondary: #1C1C1E;
     --bg-tertiary: #2C2C2E;
     --bg-sheet: #1C1C1E;
+    --bg-sheet-group: #2C2C2E;
     --fill: rgba(120, 120, 128, .36);
     --fill-2: rgba(120, 120, 128, .32);
     --fill-3: rgba(118, 118, 128, .24);
@@ -167,6 +172,7 @@
     --tint: #FF375F;
     --glass-bg: color-mix(in srgb, #2C2C2E 58%, transparent);
     --glass-bg-strong: color-mix(in srgb, #2C2C2E 84%, transparent);
+    --glass-solid: color-mix(in srgb, #2C2C2E 94%, transparent);
     --glass-edge: rgba(255, 255, 255, .12);
     --glass-shadow: 0 8px 30px rgba(0, 0, 0, .40);
     --shadow-1: 0 1px 2px rgba(0, 0, 0, .3);
@@ -181,6 +187,7 @@
   --bg-secondary: #1C1C1E;
   --bg-tertiary: #2C2C2E;
   --bg-sheet: #1C1C1E;
+  --bg-sheet-group: #2C2C2E;
   --fill: rgba(120, 120, 128, .36);
   --fill-2: rgba(120, 120, 128, .32);
   --fill-3: rgba(118, 118, 128, .24);
@@ -201,6 +208,7 @@
   --tint: #FF375F;
   --glass-bg: color-mix(in srgb, #2C2C2E 58%, transparent);
   --glass-bg-strong: color-mix(in srgb, #2C2C2E 84%, transparent);
+  --glass-solid: color-mix(in srgb, #2C2C2E 94%, transparent);
   --glass-edge: rgba(255, 255, 255, .12);
   --glass-shadow: 0 8px 30px rgba(0, 0, 0, .40);
   --shadow-1: 0 1px 2px rgba(0, 0, 0, .3);

@@ -141,6 +141,22 @@ export function haptic(kind = 'light') {
 // =====================================================================
 // Druckzustand (global) – iOS feuert :active unzuverlässig
 // =====================================================================
+// Liegende Finger/Zeiger (für das Kontextmenü: Loslassen des auslösenden Fingers darf nie schließen)
+const activePointers = new Set();
+/** Liegt gerade ein Finger/Zeiger auf dem Bildschirm? */
+export const pointerIsDown = () => activePointers.size > 0;
+function initPointerTracking() {
+  const add = (e) => activePointers.add(e.pointerId);
+  const del = (e) => activePointers.delete(e.pointerId);
+  document.addEventListener('pointerdown', add, { passive: true, capture: true });
+  window.addEventListener('pointerup', del, { passive: true, capture: true });
+  window.addEventListener('pointercancel', del, { passive: true, capture: true });
+  // Sicherheitsnetz: iOS meldet nach Systemgesten nicht immer pointerup
+  window.addEventListener('touchend', (e) => { if (!e.touches.length) activePointers.clear(); }, { passive: true, capture: true });
+  window.addEventListener('touchcancel', (e) => { if (!e.touches.length) activePointers.clear(); }, { passive: true, capture: true });
+  window.addEventListener('blur', () => activePointers.clear());
+}
+
 const PRESSABLE = 'button, a[href], label.btn, label.cell, [role="button"], .pressable, .tile, .card.is-pressable';
 let pressedEl = null, pressStart = null, pressTimer = 0;
 function clearPressed(delay = 0) {
@@ -716,21 +732,25 @@ export async function prompt({ title = '', message = '', value = '', placeholder
 // =====================================================================
 let currentToast = null;
 /**
- * toast(text, {icon, action:{label, onTap}, duration, position:'auto'|'top'|'bottom', haptic}) → {close()}
+ * toast(text, {icon, action:{label, onTap}, duration, position:'auto'|'top'|'in-sheet'|'bottom', haptic}) → {close()}
  * Nur ein Toast gleichzeitig; ein neuer ersetzt den alten.
  */
 export function toast(text, opts = {}) {
   currentToast?.close(true);
+  // Immer oben (nie über Auswahlleiste/Tab-Leiste). Ist ein großes Sheet offen, sitzt der HUD innerhalb
+  // des Sheets unter dessen Kopfzeile, damit Abbrechen/Fertig frei bleiben.
+  const live = stack.filter((r) => !r.closing);
+  const topSheet = [...live].reverse().find((r) => r.kind === 'sheet');
   const pos = opts.position && opts.position !== 'auto'
     ? opts.position
-    : stack.some((r) => !r.closing) || document.querySelector('.tabbar.is-hidden') ? 'top' : 'bottom';
+    : topSheet?.large ? 'in-sheet' : 'top';
   const t = document.createElement('div');
   t.className = `toast is-${pos}${opts.icon ? ' has-icon' : ''}`;
   t.setAttribute('role', 'status');
   t.setAttribute('aria-live', 'polite');
   t.innerHTML = `${opts.icon ? `<span class="toast-icon">${opts.icon}</span>` : ''}<span class="toast-text">${esc(text)}</span>${opts.action ? `<button type="button" class="toast-action">${esc(opts.action.label)}</button>` : ''}`;
   document.body.appendChild(t);
-  const dy = pos === 'top' ? -24 : 24;
+  const dy = pos === 'bottom' ? 24 : -24;
   springAnimate(t, [{ opacity: 0, transform: `translate(-50%, ${dy}px) scale(.86)` }, { opacity: 1, transform: 'translate(-50%, 0) scale(1)' }], { spring: 'bouncy', fill: 'forwards' });
   if (opts.haptic) haptic(opts.haptic === true ? 'light' : opts.haptic);
   let closed = false;
@@ -815,9 +835,14 @@ export function contextMenu(target, { actions = [], preview = true } = {}) {
     requestAnimationFrame(() => menu.querySelector('.cm-item')?.focus({ preventScroll: true }));
 
     let done = false;
+    let markClosed;
+    const closed = new Promise((r) => (markClosed = r));
+    document.documentElement.classList.add('cm-open');
     async function finish(action) {
       if (done) return;
       done = true;
+      markClosed();
+      document.documentElement.classList.remove('cm-open');
       rec.closing = true;
       layer.inert = true;
       const anims = [
@@ -832,9 +857,33 @@ export function contextMenu(target, { actions = [], preview = true } = {}) {
       popOverlay(rec);
       resolve(action ? (action.value ?? action.label) : null);
     }
-    back.addEventListener('click', () => finish(null));
-    back.addEventListener('touchstart', (e) => { e.preventDefault(); finish(null); }, { passive: false });
+    // Schließen nur durch einen NEUEN Tap auf den Hintergrund. Liegt beim Öffnen noch der auslösende Finger
+    // (langes Drücken), ist das Menü erst „scharf“, wenn alle Finger gehoben sind – das Loslassen selbst
+    // (pointerup / Folge-Klick) schließt nie, egal wie lange danach.
+    let armed = !pointerIsDown();
+    let downOnBack = false;
+    const arm = (e) => {
+      if (armed) return;
+      if (e.type === 'touchend' || e.type === 'touchcancel' ? e.touches.length === 0 : !pointerIsDown()) {
+        setTimeout(() => { armed = true; }, 0); // den Klick dieses Loslassens noch ignorieren
+      }
+    };
+    const armEvents = ['pointerup', 'pointercancel', 'touchend', 'touchcancel'];
+    armEvents.forEach((t) => window.addEventListener(t, arm, { passive: true }));
+    const disarm = () => armEvents.forEach((t) => window.removeEventListener(t, arm));
+    closed.then(disarm);
+    back.addEventListener('pointerdown', () => { downOnBack = armed; });
+    back.addEventListener('touchstart', (e) => {
+      if (!armed) return;
+      downOnBack = true;
+      e.preventDefault(); // kein Folge-Klick auf Elemente darunter
+      finish(null);
+    }, { passive: false });
+    back.addEventListener('click', () => { if (armed && downOnBack) finish(null); });
+    back.addEventListener('contextmenu', (e) => e.preventDefault());
+    menu.addEventListener('contextmenu', (e) => e.preventDefault());
     menu.addEventListener('click', (e) => {
+      if (!armed) return; // Klick des auslösenden Fingers
       const b = e.target.closest('.cm-item');
       if (b) finish(actions[+b.dataset.i]);
     });
@@ -849,11 +898,21 @@ export function contextMenu(target, { actions = [], preview = true } = {}) {
 export function bindLongPress(el, fn, { delay = 500, selector = null } = {}) {
   let timer = 0, start = null, fired = false, targetEl = null;
   el.style.webkitTouchCallout = 'none';
+  el.style.webkitUserSelect = 'none';
+  el.style.userSelect = 'none';
   const cancel = () => { clearTimeout(timer); timer = 0; start = null; };
+  // Unterdrückt genau den Klick, den das Loslassen DIESES Drucks erzeugt (egal wie spät), nicht spätere Taps.
   const suppressClick = () => {
-    const stop = (e) => { e.stopPropagation(); e.preventDefault(); };
-    window.addEventListener('click', stop, { capture: true, once: true });
-    setTimeout(() => window.removeEventListener('click', stop, { capture: true }), 700);
+    const stop = (e) => { e.stopPropagation(); e.preventDefault(); cleanup(); };
+    const cleanup = () => {
+      window.removeEventListener('click', stop, { capture: true });
+      window.removeEventListener('pointerdown', later, { capture: true });
+    };
+    const later = () => { if (!pointerIsDown()) cleanup(); };
+    window.addEventListener('click', stop, { capture: true });
+    // ein neuer Druck (nachdem alle Finger gehoben waren) beendet das Unterdrücken
+    setTimeout(() => window.addEventListener('pointerdown', later, { capture: true }), 0);
+    setTimeout(cleanup, 4000);
   };
   const down = (e) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
@@ -1120,6 +1179,7 @@ let inited = false;
 export function initUI() {
   if (inited) return;
   inited = true;
+  initPointerTracking();
   initPressable();
   syncViewport();
 }

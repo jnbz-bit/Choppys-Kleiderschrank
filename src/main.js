@@ -3,6 +3,7 @@ import './ui/tokens.css';
 import './ui/base.css';
 import './ui/components.css';
 import { registerSW } from 'virtual:pwa-register';
+import * as state from './app/state.js';
 import { S, boot, on, emit, applyAppearance, refreshStaleThumbs } from './app/state.js';
 import { register, run, modulesLoaded } from './app/actions.js';
 import * as ui from './ui/ui.js';
@@ -125,6 +126,7 @@ async function start() {
       const m = await import('./dev/seed.js');
       await m.seedIfEmpty({ body: params.get('demo') === 'body' });
     } catch (e) { console.error('[Demo-Daten]', e); }
+    window.__kl = state; // nur mit ?demo: Zugriff für automatische Tests
   }
   buildShell();
   await boot();

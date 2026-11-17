@@ -85,16 +85,52 @@ export function forgetItem(id) {
   for (const k of [...layers.keys()]) if (k.startsWith(id + '|')) layers.delete(k);
 }
 
-/** Gesamtbild eines Outfits als JPEG-Blob. */
-export async function composeOutfit(sel, body, itemById, urlOf, order, warp) {
+/**
+ * Gesamtbild eines Outfits als JPEG-Blob.
+ * opts (optional): { studio = true } – heller Studio-Verlauf (#FAFAFC → #E9E9EF) mit weichem Bodenschatten,
+ * Bild mindestens 3:4 (Figur mittig). { studio: false } bzw. { background: '#E1E4DD' } = alter flacher Grund.
+ */
+export async function composeOutfit(sel, body, itemById, urlOf, order, warp, opts = {}) {
   const H = 1000, W = Math.round((H * body.w) / body.h);
+  const studio = opts.studio !== false && !opts.background;
   const c = document.createElement('canvas');
-  c.width = W + 120;
   c.height = H + 80;
+  c.width = studio ? Math.max(W + 120, Math.round(c.height * 0.75)) : W + 120;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#E1E4DD';
-  ctx.fillRect(0, 0, c.width, c.height);
-  ctx.translate(60, 40);
+  const ox = Math.round((c.width - W) / 2);
+  if (studio) {
+    const g = ctx.createLinearGradient(0, 0, 0, c.height);
+    g.addColorStop(0, '#FAFAFC');
+    g.addColorStop(1, '#E9E9EF');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, c.width, c.height);
+    // weiches Licht oben
+    const r = ctx.createRadialGradient(c.width / 2, c.height * 0.2, 0, c.width / 2, c.height * 0.2, c.width * 0.75);
+    r.addColorStop(0, 'rgba(255,255,255,.75)');
+    r.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = r;
+    ctx.fillRect(0, 0, c.width, c.height);
+    // Bodenschatten unter den Füßen
+    const fy = 40 + (body.guides?.floor ?? 0.98) * H;
+    const fx = ox + (body.guides?.cx ?? 0.5) * W;
+    const rw = Math.max(W * 0.42, 120), rh = 26;
+    ctx.save();
+    ctx.translate(fx, fy);
+    ctx.scale(1, rh / rw);
+    const s = ctx.createRadialGradient(0, 0, 0, 0, 0, rw);
+    s.addColorStop(0, 'rgba(0,0,0,.20)');
+    s.addColorStop(0.45, 'rgba(0,0,0,.08)');
+    s.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = s;
+    ctx.beginPath();
+    ctx.arc(0, 0, rw, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  } else {
+    ctx.fillStyle = opts.background || '#E1E4DD';
+    ctx.fillRect(0, 0, c.width, c.height);
+  }
+  ctx.translate(ox, 40);
   const k = H / body.h;
   const b = await bodyAsset(body);
   ctx.drawImage(b.img, 0, 0, W, H);

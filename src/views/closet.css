@@ -1,1 +1,142 @@
-/* closet – gehört dem jeweiligen View-Entwickler. Nur Klassen mit Präfix .closet- verwenden. */
+/* Tab „Schrank“ + Teil-Detail. Nur Klassen mit Präfix .closet- */
+
+/* ---------- Kategorie-Leiste (haftet beim Scrollen als Glasleiste) ---------- */
+.closet-bar {
+  position: sticky;
+  top: var(--closet-sticky, 0px); /* wird in JS geeicht (Browser rechnen das Scroller-Padding unterschiedlich) */
+  z-index: 6;
+  padding: 4px 0 10px;
+}
+.closet-bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: 0 var(--hairline) 0 var(--separator);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+  pointer-events: none;
+}
+.closet-page.closet-is-stuck .closet-bar::before { opacity: 1; }
+/* Leiste und Navigationsleiste verschmelzen: keine Trennlinie dazwischen */
+.closet-page.closet-is-stuck .nav-bar::before { box-shadow: none; }
+.closet-chips { position: relative; }
+.closet-chips .chip.closet-chip-empty .chip-count { opacity: .5; }
+
+/* ---------- Raster ---------- */
+.closet-list { padding-top: 2px; min-height: 40vh; }
+.closet-section { contain: layout; }
+.closet-section-title { padding-top: 18px; }
+.closet-section:first-child .closet-section-title { padding-top: 10px; }
+.closet-list.is-filtered .closet-section { padding-top: 6px; }
+.closet-grid { padding-bottom: 4px; }
+
+.closet-tile {
+  view-transition-class: closet-tile;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .03);
+}
+.closet-tile > img {
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.closet-tile .tile-badge { top: 7px; right: 7px; gap: 3px; }
+.closet-tile .tile-badge .metal-dot { width: 10px; height: 10px; }
+.closet-tile .tile-badge svg { width: 13px; height: 13px; }
+.closet-section-title { view-transition-class: closet-tile; }
+
+::view-transition-group(*.closet-tile) {
+  animation-duration: 420ms;
+  animation-timing-function: cubic-bezier(.32, .72, 0, 1);
+}
+::view-transition-old(*.closet-tile),
+::view-transition-new(*.closet-tile) {
+  animation-duration: 260ms;
+}
+
+.closet-page.closet-is-empty .large-title-wrap { padding-bottom: 0; }
+
+/* ---------- Teil-Detail ---------- */
+.closet-detail-body { padding-top: 2px; }
+.closet-hero {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  max-height: min(44vh, 400px);
+  margin: 0 auto;
+  width: 100%;
+  border-radius: var(--r-xl);
+  overflow: hidden;
+}
+.closet-hero-img {
+  position: absolute;
+  inset: 10% 12% 14%;
+  width: 76%;
+  height: 76%;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .14));
+  z-index: 1;
+  -webkit-user-drag: none;
+}
+.closet-hero-floor { top: 86%; left: 22%; right: 22%; height: 6%; }
+
+.closet-detail-head {
+  padding: 18px 8px 4px;
+  text-align: center;
+}
+.closet-name {
+  text-align: center;
+  width: 100%;
+}
+.closet-meta {
+  margin-top: 4px;
+  font: var(--text-subhead);
+  letter-spacing: var(--track-subhead);
+  color: var(--label-2);
+}
+
+/* Drei Aktions-Kacheln wie in Kontakte/Karten */
+.closet-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 18px 0 26px;
+}
+.closet-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 66px;
+  padding: 10px 4px 9px;
+  border-radius: var(--r-m);
+  background: var(--bg-elevated);
+  color: var(--tint);
+  font: 500 12px/16px var(--font);
+  letter-spacing: var(--track-caption);
+  transform: scale(var(--press, 1));
+  transition: transform 380ms var(--spring-bounce), background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.closet-action > span:not(.closet-fav-ic) { color: var(--label); white-space: nowrap; }
+.closet-action svg { width: 24px; height: 24px; }
+.closet-action[data-pressed] { --press: .95; transition-duration: 100ms; }
+.closet-action.is-primary { background: var(--tint); color: var(--on-tint); }
+.closet-action.is-primary > span { color: var(--on-tint); }
+.closet-fav-ic { display: grid; place-items: center; width: 24px; height: 24px; }
+.closet-fav-ic svg { width: 24px; height: 24px; }
+
+.closet-field { margin-bottom: 22px; }
+.closet-field .list-header { padding-left: 16px; }
+.closet-cats, .closet-metals { gap: 8px; }
+.closet-detail .closet-info { margin-bottom: 22px; }
+.closet-detail-body > .list { padding: 0; }
+.closet-color { display: inline-flex; align-items: center; gap: 8px; }
+.closet-color .color-dot { width: 16px; height: 16px; }
+
+/* Gruppen im dunklen Sheet eine Stufe heller (sonst gleich wie der Sheet-Grund) */
+html[data-appearance="dark"] .closet-detail .list-group,
+html[data-appearance="dark"] .closet-detail .closet-action:not(.is-primary) { background: var(--bg-tertiary); }
+@media (prefers-color-scheme: dark) {
+  html:not([data-appearance="light"]) .closet-detail .list-group,
+  html:not([data-appearance="light"]) .closet-detail .closet-action:not(.is-primary) { background: var(--bg-tertiary); }
+}

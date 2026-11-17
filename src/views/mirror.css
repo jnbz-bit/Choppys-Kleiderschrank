@@ -1,1 +1,396 @@
-/* mirror – gehört dem jeweiligen View-Entwickler. Nur Klassen mit Präfix .mirror- verwenden. */
+/* =====================================================================
+   Tab „Anprobe“ (Spiegel). Nur Klassen mit Präfix .mirror-
+   ===================================================================== */
+
+.mirror {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background:
+    radial-gradient(90% 55% at 50% 38%, color-mix(in srgb, var(--stage-top) 75%, #fff 25%) 0%, transparent 70%),
+    linear-gradient(180deg, var(--stage-top) 0%, var(--stage-bottom) 100%);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ---------- Kopf ---------- */
+.mirror-head {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  padding: calc(var(--safe-t) + 10px) var(--gap) 2px var(--gap-title);
+}
+.mirror-head-text { flex: 1; min-width: 0; }
+.mirror-date {
+  margin: 0;
+  font: 600 13px/18px var(--font);
+  letter-spacing: .01em;
+  text-transform: uppercase;
+  color: var(--label-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mirror-title {
+  margin: 0;
+  font: var(--text-title1);
+  letter-spacing: var(--track-title1);
+  color: var(--label);
+  white-space: nowrap;
+}
+.mirror-head-actions {
+  display: flex;
+  gap: 10px;
+  padding-bottom: 1px;
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur) var(--spring);
+}
+.mirror-head .mirror-icon-btn { --size: 40px; }
+.mirror-head .mirror-icon-btn svg { width: 20px; height: 20px; }
+.mirror.is-adjusting .mirror-head-actions { opacity: 0; transform: scale(.8); pointer-events: none; }
+
+/* ---------- Banner ---------- */
+.mirror-banner-slot { flex-shrink: 0; padding: 10px 12px 0; }
+.mirror-banner-slot:empty { display: none; }
+.mirror-banner { min-height: 58px; }
+.mirror-banner .banner-icon.has-image {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+.mirror-banner-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mirror.is-adjusting .mirror-banner-slot { display: none; }
+
+/* ---------- Bühne ---------- */
+.mirror-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 12px 8px;
+}
+.mirror-stage {
+  position: relative;
+  flex-shrink: 0;
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  will-change: transform;
+}
+.mirror-stage.is-adjusting { touch-action: none; cursor: grab; }
+.mirror-body {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  transition: opacity var(--dur) var(--ease-out);
+}
+.mirror-floor {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  height: 4.4%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--stage-shadow), transparent);
+  filter: blur(3px);
+  pointer-events: none;
+}
+.mirror-layers, .mirror-slot { position: absolute; inset: 0; pointer-events: none; }
+.mirror-slot { transition: opacity var(--dur) var(--ease-out); }
+.mirror-layer {
+  position: absolute;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .16));
+}
+/* Platzhalterfigur im Dunkeln dezent */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-appearance="light"]) .mirror-stage.is-placeholder .mirror-body { filter: brightness(.36) contrast(1.1); }
+}
+:root[data-appearance="dark"] .mirror-stage.is-placeholder .mirror-body { filter: brightness(.36) contrast(1.1); }
+
+/* Anpassen: Zielteil hervorheben, Rest abblenden */
+.mirror-stage.is-adjusting .mirror-slot:not(.is-target) { opacity: .26; }
+.mirror-stage.is-adjusting .mirror-body { opacity: .82; }
+.mirror-stage.is-adjusting .mirror-slot.is-target .mirror-layer {
+  filter: drop-shadow(0 0 .8px var(--tint)) drop-shadow(0 0 .8px var(--tint)) drop-shadow(0 10px 18px rgba(0, 0, 0, .2));
+}
+
+/* ---------- Werkzeuge ---------- */
+.mirror-tools {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mirror-tools .mirror-icon-btn svg { width: 21px; height: 21px; }
+.mirror-tools .mirror-icon-btn svg { transform-origin: 50% 50%; }
+
+/* ---------- Etikett „Oberteil 2/5“ ---------- */
+.mirror-tag {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 3;
+  transform: translate(-50%, 0);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 15px 8px;
+  border-radius: var(--r-capsule);
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass);
+  color: var(--label);
+  font: 600 15px/18px var(--font);
+  letter-spacing: var(--track-subhead);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+}
+.mirror-tag.is-shown { opacity: 1; }
+.mirror-tag:empty { display: none; }
+.mirror-tag-dots { display: flex; gap: 4px; }
+.mirror-tag-dots i {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--label-3);
+  transition: background-color var(--dur-fast);
+}
+.mirror-tag-dots i.is-none { background: none; box-shadow: inset 0 0 0 1px var(--label-3); }
+.mirror-tag-dots i.is-on { background: var(--label); box-shadow: none; }
+
+/* ---------- Wisch-Hinweis ---------- */
+.mirror-hint {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  z-index: 3;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+.mirror-hint-track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 132px;
+  height: 44px;
+  padding: 0 10px;
+  border-radius: var(--r-capsule);
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass);
+  color: var(--label-2);
+}
+.mirror-hint-chev { width: 16px; height: 16px; display: grid; place-items: center; }
+.mirror-hint-chev svg { width: 16px; height: 16px; stroke-width: 2.4; }
+.mirror-hint-chev.is-l { animation: mirror-chev-l 2.4s var(--ease-out) infinite; }
+.mirror-hint-chev.is-r { animation: mirror-chev-r 2.4s var(--ease-out) infinite; }
+.mirror-hint-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border-radius: 50%;
+  background: var(--tint);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--tint) 40%, transparent), inset 0 0 0 3px rgba(255, 255, 255, .55);
+  animation: mirror-swipe 2.4s cubic-bezier(.45, 0, .2, 1) infinite;
+}
+.mirror-hint-text {
+  padding: 5px 12px;
+  border-radius: var(--r-capsule);
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass);
+  font: 600 13px/18px var(--font);
+  letter-spacing: var(--track-footnote);
+  color: var(--label);
+  white-space: nowrap;
+}
+@keyframes mirror-swipe {
+  0%, 8% { transform: translateX(0) scale(1); opacity: 0; }
+  14% { transform: translateX(0) scale(1); opacity: 1; }
+  42% { transform: translateX(-36px) scale(.92); opacity: 1; }
+  50% { transform: translateX(-36px) scale(.92); opacity: 0; }
+  58% { transform: translateX(0) scale(1); opacity: 0; }
+  64% { transform: translateX(0) scale(1); opacity: 1; }
+  92% { transform: translateX(36px) scale(.92); opacity: 1; }
+  100% { transform: translateX(36px) scale(.92); opacity: 0; }
+}
+@keyframes mirror-chev-l { 0%, 20%, 50%, 100% { opacity: .35; } 35% { opacity: 1; transform: translateX(-2px); } }
+@keyframes mirror-chev-r { 0%, 70%, 100% { opacity: .35; } 85% { opacity: 1; transform: translateX(2px); } }
+@media (prefers-reduced-motion: reduce) {
+  .mirror-hint-dot { animation: none; }
+  .mirror-hint-chev.is-l, .mirror-hint-chev.is-r { animation: none; opacity: .7; }
+}
+
+/* ---------- Auswahl-Panel ---------- */
+.mirror-panel {
+  position: relative;
+  flex-shrink: 0;
+  margin: 0 10px;
+  padding: 12px 0 8px;
+  border-radius: 28px;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass);
+}
+.mirror-bottom { flex-shrink: 0; height: calc(var(--tabbar-h) + var(--tabbar-bottom) + 10px); }
+.mirror.is-adjusting .mirror-bottom { height: var(--tabbar-bottom); }
+
+.mirror-chips { padding: 0 14px; scroll-padding: 0 14px; }
+.mirror-chips .chip { height: 34px; padding: 0 14px; }
+.mirror-metal { padding: 10px 14px 0; }
+.mirror-strip-row {
+  display: flex;
+  align-items: center;
+  height: 78px;
+  margin-top: 4px;
+}
+.mirror-strip {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  padding: 7px 20px 7px 14px;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 10px, #000 calc(100% - 12px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 10px, #000 calc(100% - 12px), transparent);
+}
+.mirror-strip::-webkit-scrollbar { display: none; }
+.mirror-thumb {
+  --sel: 1;
+  position: relative;
+  flex: 0 0 auto;
+  width: 62px;
+  height: 62px;
+  border-radius: var(--r-m);
+  background: var(--bg-elevated);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 2px 8px rgba(0, 0, 0, .04);
+  overflow: hidden;
+  -webkit-touch-callout: none;
+  transform: scale(calc(var(--press, 1) * var(--sel)));
+  transition: transform 420ms var(--spring-bounce), box-shadow var(--dur-fast) var(--ease-out);
+}
+.mirror-thumb img {
+  position: absolute;
+  inset: 9%;
+  width: 82%;
+  height: 82%;
+  object-fit: contain;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+.mirror-thumb[data-pressed] { --press: .92; transition-duration: 120ms; }
+.mirror-thumb[aria-selected="true"] {
+  --sel: 1.07;
+  box-shadow: inset 0 0 0 2.5px var(--tint), 0 6px 14px color-mix(in srgb, var(--tint) 22%, transparent);
+}
+.mirror-thumb .metal-dot { position: absolute; top: 6px; right: 6px; }
+.mirror-thumb.is-none {
+  display: grid;
+  place-items: center;
+  background: var(--fill-3);
+  box-shadow: none;
+  color: var(--label-2);
+  font: 500 13px/16px var(--font);
+  letter-spacing: var(--track-footnote);
+}
+.mirror-thumb.is-none[aria-selected="true"] { color: var(--tint); box-shadow: inset 0 0 0 2.5px var(--tint); }
+
+.mirror-strip-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 0 14px 0 20px;
+}
+.mirror-strip-empty-text {
+  min-width: 0;
+  font: var(--text-subhead);
+  letter-spacing: var(--track-subhead);
+  color: var(--label-2);
+}
+
+/* Leerer Schrank */
+.mirror-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 10px 24px 10px;
+}
+.mirror-empty-symbol { width: 44px; height: 44px; color: var(--label-2); margin-bottom: 10px; }
+.mirror-empty-symbol svg { width: 100%; height: 100%; stroke-width: 1.4; }
+.mirror-empty-title { font: var(--text-title3); letter-spacing: var(--track-title3); }
+.mirror-empty-text {
+  margin: 6px 0 0;
+  max-width: 300px;
+  font: var(--text-subhead);
+  letter-spacing: var(--track-subhead);
+  color: var(--label-2);
+  text-wrap: pretty;
+}
+.mirror-empty .btn { margin-top: 16px; }
+.mirror.is-empty .mirror-picker { display: none; }
+
+/* Sitz anpassen */
+.mirror-adjust { padding: 2px 16px 4px; }
+.mirror-adjust-hint {
+  margin: 0 0 4px;
+  text-align: center;
+  font: var(--text-footnote);
+  letter-spacing: var(--track-footnote);
+  color: var(--label-2);
+  text-wrap: balance;
+}
+.mirror-size { display: flex; align-items: center; gap: 12px; height: 48px; margin-bottom: 8px; }
+.mirror-size-label { font: var(--text-subhead); font-weight: 600; letter-spacing: var(--track-subhead); }
+.mirror-size .slider { flex: 1; }
+.mirror-size-value {
+  min-width: 46px;
+  text-align: right;
+  font: var(--text-subhead);
+  letter-spacing: var(--track-subhead);
+  color: var(--label-2);
+}
+
+/* Kleine Bildschirme (iPhone SE) */
+@media (max-height: 700px) {
+  .mirror-head { padding-top: calc(var(--safe-t) + 6px); }
+  .mirror-title { font: var(--text-title2); letter-spacing: var(--track-title2); }
+  .mirror-panel { padding-top: 10px; }
+  .mirror-strip-row { height: 72px; }
+  .mirror-thumb { width: 56px; height: 56px; }
+  .mirror-wrap { padding-top: 6px; }
+}
+
+/* Kacheln im Dunkeln etwas heller als das Glas */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-appearance="light"]) .mirror-thumb:not(.is-none) { background: var(--bg-tertiary); box-shadow: none; }
+}
+:root[data-appearance="dark"] .mirror-thumb:not(.is-none) { background: var(--bg-tertiary); box-shadow: none; }

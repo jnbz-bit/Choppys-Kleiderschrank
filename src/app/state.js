@@ -204,7 +204,7 @@ export async function deleteItem(id) {
 export const outfitSig = (sel) =>
   JSON.stringify([
     LAYER_ORDER.map((c) => { const it = itemById(sel[c]); return it ? [it.id, it.cat, it.fit || null] : null; }),
-    S.body?.updated || 0, warpOn()
+    S.body?.updated || 0, warpOn(), 'studio2' // Versionsmarke: Bildstil geändert → alte Vorschauen einmal neu zeichnen
   ]);
 
 const BLANK = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';

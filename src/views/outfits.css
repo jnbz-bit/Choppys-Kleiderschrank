@@ -1,1 +1,251 @@
-/* outfits – gehört dem jeweiligen View-Entwickler. Nur Klassen mit Präfix .outfits- verwenden. */
+/* ===================== Tab Outfits ===================== */
+/* Outfit-Bilder werden von der Engine immer im hellen Studio-Look gezeichnet; dieser Ton füllt den Platz, bis das Bild da ist. */
+.outfits-page, .outfits-detail-sheet, .outfits-save-sheet, .outfits-assign-sheet { --outfits-photo: #F1F1F5; }
+.outfits-wrap { padding-top: 4px; }
+
+/* ---------- Wochenleiste ---------- */
+.outfits-week {
+  margin: 0 var(--gap) 18px;
+  padding: 10px 6px 12px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  background: var(--bg-elevated);
+  border-radius: var(--r-xl);
+}
+.outfits-wd {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 0 8px;
+  border-radius: 18px;
+  color: var(--label);
+  transform: scale(var(--press, 1));
+  transition: transform 380ms var(--spring-bounce), background-color var(--dur-fast) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+.outfits-wd[data-pressed] { --press: .92; transition-duration: 90ms; }
+.outfits-wd[aria-pressed="true"] { background: var(--tint-soft); }
+.outfits-wd-name {
+  font: 600 11px/13px var(--font);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--label-2);
+}
+.outfits-wd-date {
+  width: 30px; height: 30px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  font: 500 17px/1 var(--font);
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+  transition: background-color var(--dur-fast), color var(--dur-fast);
+}
+.outfits-wd.is-today .outfits-wd-name { color: var(--tint); }
+.outfits-wd.is-today .outfits-wd-date { background: var(--tint); color: var(--on-tint); font-weight: 600; }
+.outfits-wd-pv {
+  position: relative;
+  margin-top: 5px;
+  width: 34px; height: 46px;
+  display: grid; place-items: center;
+}
+.outfits-wd-empty {
+  width: 30px; height: 40px;
+  display: grid; place-items: center;
+  border-radius: 9px;
+  background: var(--fill-3);
+  color: var(--label-3);
+}
+.outfits-wd-empty svg { width: 14px; height: 14px; stroke-width: 2.2; }
+.outfits-wd[aria-pressed="true"] .outfits-wd-empty { background: color-mix(in srgb, var(--tint) 16%, transparent); color: var(--tint); }
+.outfits-wd-stack { position: relative; width: 32px; height: 43px; }
+.outfits-wd-stack img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: 50% 30%;
+  border-radius: 9px;
+  background: var(--outfits-photo);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .14), 0 0 0 .5px rgba(0, 0, 0, .06);
+}
+.outfits-wd-stack.is-multi img:not(.is-back) { transform: translate(-2px, 1px); }
+.outfits-wd-stack img.is-back { transform: translate(3px, -2px) rotate(6deg) scale(.94); opacity: .9; }
+.outfits-wd-count {
+  position: absolute;
+  right: -4px; bottom: -3px;
+  min-width: 17px; height: 17px;
+  padding: 0 4px;
+  display: grid; place-items: center;
+  border-radius: 9px;
+  background: var(--tint);
+  color: var(--on-tint);
+  font: 700 11px/1 var(--font);
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--bg-elevated);
+}
+
+/* ---------- Kopf über dem Raster ---------- */
+.outfits-head { padding: 0 var(--gap); margin-bottom: 14px; min-height: 32px; }
+.outfits-seg { width: 100%; }
+.outfits-dayhead { display: flex; align-items: center; gap: 10px; min-height: 36px; }
+.outfits-dayhead-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.outfits-dayhead-title { font: var(--text-title3); letter-spacing: var(--track-title3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.outfits-dayhead-sub { font: var(--text-footnote); letter-spacing: var(--track-footnote); color: var(--label-2); }
+.outfits-dayhead .btn svg { width: 16px; height: 16px; }
+
+/* ---------- Karten ---------- */
+.outfits-grid { row-gap: 14px; }
+.outfits-card { box-shadow: 0 1px 2px rgba(0, 0, 0, .04); }
+.outfits-media { aspect-ratio: 3 / 4; background: var(--outfits-photo); }
+.outfits-media > img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+.outfits-card .card-body { padding: 10px 12px 12px; gap: 6px; }
+.outfits-tags { display: flex; gap: 4px; flex-wrap: nowrap; overflow: hidden; min-height: 20px; align-items: center; }
+.outfits-tag {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border-radius: var(--r-capsule);
+  background: var(--fill-3);
+  color: var(--label-2);
+  font: 600 12px/16px var(--font);
+}
+.outfits-tag.is-today { background: var(--tint-soft); color: var(--tint); }
+.outfits-none { font: var(--text-footnote); letter-spacing: var(--track-footnote); color: var(--label-3); }
+
+/* leerer Tag */
+.outfits-dayempty {
+  margin: 4px var(--gap) 0;
+  padding: 28px 24px 24px;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  background: var(--bg-elevated);
+  border-radius: var(--r-xl);
+}
+.outfits-dayempty-icon { width: 44px; height: 44px; color: var(--label-3); margin-bottom: 10px; }
+.outfits-dayempty-icon svg { width: 100%; height: 100%; stroke-width: 1.4; }
+.outfits-dayempty-title { font: var(--text-headline); letter-spacing: var(--track-body); }
+.outfits-dayempty-text { margin-top: 4px; font: var(--text-subhead); letter-spacing: var(--track-subhead); color: var(--label-2); text-wrap: pretty; max-width: 290px; }
+.outfits-dayempty .btn { margin-top: 18px; }
+
+.outfits-page.outfits-is-empty .outfits-week { opacity: .55; }
+.outfits-page.outfits-is-empty .outfits-head { display: none; }
+
+
+/* ===================== Outfit-Detail ===================== */
+.outfits-detail { padding-top: 4px; }
+.outfits-hero {
+  width: min(68%, 300px, calc(46dvh * .75));
+  margin: 0 auto;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  background: var(--outfits-photo);
+  box-shadow: 0 18px 40px -16px rgba(0, 0, 0, .28), 0 0 0 .5px rgba(0, 0, 0, .05);
+}
+.outfits-hero img { width: 100%; height: 100%; object-fit: cover; }
+.outfits-detail-head { margin: 20px 4px 18px; text-align: center; }
+.outfits-name { text-align: center; font: var(--text-title1); letter-spacing: var(--track-title1, .013em); }
+.outfits-meta { margin-top: 4px; font: var(--text-subhead); letter-spacing: var(--track-subhead); color: var(--label-2); }
+.outfits-actions { margin-bottom: 24px; }
+.outfits-actions .btn { flex: 1; }
+.outfits-missing { margin-bottom: 24px; }
+.outfits-missing .banner-icon { color: var(--yellow); background: color-mix(in srgb, var(--yellow) 16%, transparent); }
+.outfits-missing .banner-title { white-space: normal; }
+.outfits-days-group { padding: 12px 12px; }
+.outfits-detail .list, .outfits-save .list, .outfits-assign .list { padding: 0; }
+
+.outfits-pieces {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 calc(-1 * var(--gap));
+  padding: 2px var(--gap) 4px;
+  scroll-padding: 0 var(--gap);
+}
+.outfits-pieces::-webkit-scrollbar { display: none; }
+.outfits-piece {
+  flex: 0 0 84px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  transform: scale(var(--press, 1));
+  transition: transform 380ms var(--spring-bounce);
+}
+.outfits-piece[data-pressed] { --press: .93; transition-duration: 90ms; }
+.outfits-piece .tile { width: 84px; pointer-events: none; }
+.outfits-piece-label {
+  display: block;
+  width: 84px;
+  max-width: 84px;
+  font: var(--text-caption); color: var(--label-2);
+  text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ===================== Outfit sichern ===================== */
+.outfits-save { padding-top: 4px; }
+.outfits-save-top { display: flex; gap: 16px; align-items: center; margin-bottom: 24px; }
+.outfits-save-thumb {
+  position: relative;
+  flex: 0 0 96px;
+  height: 128px;
+  border-radius: var(--r-m);
+  overflow: hidden;
+  background: var(--outfits-photo);
+  box-shadow: 0 10px 24px -12px rgba(0, 0, 0, .3), 0 0 0 .5px rgba(0, 0, 0, .05);
+}
+.outfits-save-thumb img { width: 100%; height: 100%; object-fit: cover; transition: opacity 300ms var(--ease-out); }
+.outfits-save-thumb.is-loading img { opacity: 0; }
+.outfits-save-thumb.is-loading::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .55) 50%, transparent 70%);
+  background-size: 220% 100%;
+  animation: outfits-shimmer 1.2s linear infinite;
+}
+@keyframes outfits-shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+.outfits-save-fields { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.outfits-save-label { padding: 0 4px; font: var(--text-footnote); letter-spacing: var(--track-footnote); color: var(--label-2); }
+.outfits-save-count { padding: 0 4px; font: var(--text-footnote); letter-spacing: var(--track-footnote); color: var(--label-2); }
+.outfits-save-sheet .textfield { background: var(--bg-elevated); }
+.outfits-optional { text-transform: none; color: var(--label-3); margin-left: 4px; }
+
+/* ===================== Tag planen ===================== */
+.outfits-assign-lead { margin: 0 4px 14px; font: var(--text-subhead); letter-spacing: var(--track-subhead); color: var(--label-2); }
+.outfits-assign-row { --inset: 76px; gap: 14px; padding-top: 8px; padding-bottom: 8px; }
+.outfits-assign-thumb {
+  flex: 0 0 46px; height: 60px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--outfits-photo);
+}
+.outfits-assign-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.outfits-check { width: 24px; height: 24px; color: var(--tint); flex-shrink: 0; position: relative; }
+.outfits-check svg { width: 24px; height: 24px; transform: scale(.4); opacity: 0; transition: transform 380ms var(--spring-bounce), opacity 180ms; }
+.outfits-check::before {
+  content: ""; position: absolute; inset: 1.5px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--label-4, var(--label-3));
+  transition: opacity 180ms;
+}
+.outfits-assign-row[aria-pressed="true"] .outfits-check svg { transform: none; opacity: 1; }
+.outfits-assign-row[aria-pressed="true"] .outfits-check::before { opacity: 0; }
+
+@media (max-width: 360px) {
+  .outfits-wd-date { width: 27px; height: 27px; font-size: 15px; }
+  .outfits-wd-stack { width: 28px; height: 38px; }
+}
+
+/* Gruppen in Sheets: im Dunkelmodus eine Stufe heller als der Sheet-Grund (wie iOS) */
+.outfits-detail-sheet, .outfits-save-sheet, .outfits-assign-sheet { --outfits-group: var(--bg-elevated); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-appearance="light"]) :is(.outfits-detail-sheet, .outfits-save-sheet, .outfits-assign-sheet) { --outfits-group: var(--bg-tertiary); }
+}
+:root[data-appearance="dark"] :is(.outfits-detail-sheet, .outfits-save-sheet, .outfits-assign-sheet) { --outfits-group: var(--bg-tertiary); }
+:is(.outfits-detail-sheet, .outfits-save-sheet, .outfits-assign-sheet) :is(.list-group, .banner.is-solid) { background: var(--outfits-group); }
+.outfits-save-sheet .textfield { background: var(--outfits-group); }
+.outfits-save .textfield:focus-visible { outline: none; }

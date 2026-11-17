@@ -504,7 +504,7 @@ button.card[data-pressed], .card.is-pressable[data-pressed] { --press: .97; tran
   display: block;
   aspect-ratio: 1;
   border-radius: var(--r-m);
-  background: var(--bg-elevated);
+  background: var(--tile-bg);
   overflow: hidden;
   -webkit-touch-callout: none;
   transform: scale(var(--press, 1));

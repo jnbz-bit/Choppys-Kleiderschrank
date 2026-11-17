@@ -43,6 +43,7 @@
   --bg-sheet: #F2F2F7;              /* Grund eines Sheets (grouped) */
   --bg-sheet-group: #FFFFFF;        /* Gruppen/Karten auf dem Sheet-Grund */
   --bg-group: var(--bg-elevated);   /* Gruppen/Karten im aktuellen Kontext (in Sheets umgestellt) */
+  --tile-bg: #FFFFFF;               /* Kacheln mit freigestellten Teilen */
   --fill: rgba(120, 120, 128, .20);
   --fill-2: rgba(120, 120, 128, .16);
   --fill-3: rgba(118, 118, 128, .12);
@@ -152,6 +153,7 @@
     --bg-tertiary: #2C2C2E;
     --bg-sheet: #1C1C1E;
     --bg-sheet-group: #2C2C2E;
+    --tile-bg: linear-gradient(180deg, #3A3A3C, #2C2C2E); /* dunkle Teile bleiben sichtbar */
     --fill: rgba(120, 120, 128, .36);
     --fill-2: rgba(120, 120, 128, .32);
     --fill-3: rgba(118, 118, 128, .24);
@@ -188,6 +190,7 @@
   --bg-tertiary: #2C2C2E;
   --bg-sheet: #1C1C1E;
   --bg-sheet-group: #2C2C2E;
+  --tile-bg: linear-gradient(180deg, #3A3A3C, #2C2C2E);
   --fill: rgba(120, 120, 128, .36);
   --fill-2: rgba(120, 120, 128, .32);
   --fill-3: rgba(118, 118, 128, .24);

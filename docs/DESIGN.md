@@ -228,10 +228,14 @@ toast('Im Schrank gesichert', { icon: I.checkCircleFill });
 const t = toast('Outfit geleert', { icon: I.reset, action: { label: 'Rückgängig', onTap: undo }, duration: 4500 });
 t.close();
 ```
-`position: 'auto'` (Standard: über der Tab-Leiste; oben, wenn ein Overlay offen oder Tab-Leiste versteckt) | `'top'` | `'bottom'`.
+`position: 'auto'` (Standard: oben direkt unter der Kopf-/Navigationsleiste; ist ein großes Sheet offen, innerhalb des
+Sheets unter dessen Kopfzeile – nie über Auswahlleiste, Tab-Leiste oder Abbrechen/Fertig) | `'top'` | `'in-sheet'` | `'bottom'`.
 Ein neuer Toast ersetzt den alten.
 
+`shareFiles(files, {title})` teilt über das iOS-Teilen-Menü (mit erneuter Nutzeraktion, falls Safari ablehnt) → `'shared'|'aborted'|'unsupported'`.
+
 ### 4.5 Kontextmenü + langes Drücken
+Das Loslassen des auslösenden Fingers schließt das Menü nie (egal wie spät); erst ein neuer Tap auf den Hintergrund.
 ```js
 bindLongPress(grid, (tile) => contextMenu(tile, { actions: [
   { label: 'Anprobieren', icon: I.mirror, onTap: () => … },
@@ -275,7 +279,9 @@ Alle Symbole sichtbar unter `?gallery=1`. Neue Symbole nur am Ende von `I` ergä
 ## 5. CSS – Variablen (`tokens.css`)
 
 **Farben** (hell/dunkel automatisch; `html[data-appearance=light|dark]` erzwingt): `--bg` (grauer Grund),
-`--bg-elevated` (Karten/Gruppen), `--bg-secondary`, `--bg-tertiary` (Fläche in Gruppe), `--bg-sheet`, `--fill`,
+`--bg-elevated` (Karten), `--bg-group` (Gruppen/Karten im aktuellen Kontext: auf Seiten = `--bg-elevated`, in Sheets
+automatisch `--bg-sheet-group`, dunkel #2C2C2E auf #1C1C1E – für alles Gruppenartige in Sheets **diese** Variable nehmen,
+keine eigenen Dunkel-Regeln), `--tile-bg` (Kacheln), `--bg-secondary`, `--bg-tertiary` (Fläche in Gruppe), `--bg-sheet`, `--fill`,
 `--fill-2`, `--fill-3`, `--fill-4`, `--label`, `--label-2`, `--label-3`, `--label-4`, `--separator`, `--separator-opaque`,
 `--red`, `--green`, `--yellow`, `--gold`, `--silver`, `--tint`, `--tint-soft`, `--tint-softer`, `--on-tint` (Text auf Tint),
 `--scrim`, `--stage-top`, `--stage-bottom`, `--stage-shadow` (Studio-Bühne).

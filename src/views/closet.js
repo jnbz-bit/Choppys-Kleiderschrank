@@ -302,7 +302,7 @@ function render() {
 
   if (empty) {
     list.replaceChildren(emptyState({
-      icon: I.hanger, title: 'Der Schrank ist leer',
+      icon: I.hanger, title: 'Dein Schrank ist leer',
       text: 'Fotografiere ein Kleidungsstück – die App schneidet es aus und legt es hier ab.',
       action: { label: 'Erstes Teil scannen', icon: I.camera, onTap: () => run('openScan', {}) }, fill: true
     }));

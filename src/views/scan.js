@@ -10,7 +10,8 @@ import {
   removeBg, trimCanvas, coverage, dominantColor, guessMetal, guessCategory, estimateGuides, loadBitmap, canvasFrom,
   toBlob, preloadRemover
 } from '../imaging.js';
-import { analyzeWorn, defaultSelection, categoryFromSelection, regionAt, cutSelection, renderSelection, preloadSegmenter } from '../garment.js';
+import { analyzeWorn, defaultSelection, categoryFromSelection, regionAt, cutSelection, renderSelection, preloadSegmenter, occlusion } from '../garment.js';
+import { prepareChatgpt, sendToChatgpt, chatgptPrompt } from '../chatgpt.js';
 import { aiAvailable, enhanceWithAI } from '../ai.js';
 
 // ---------------------------------------------------------------------------
@@ -175,6 +176,7 @@ function openScan(opts = {}) {
   Object.assign(f, { presetCat: CAT[opts?.cat] ? opts.cat : null, queue: [], batch: 0, pos: 0, busy: false, saved: [], result: null });
   f.onFiles = (files, tag) => {
     if (tag === 'retry') { if (!f.busy) processGarment(f, files[0]); return; }
+    if (tag === 'gpt') { importGpt(f, files[0]); return; }
     if (!f.busy && !f.result) { f.batch = 0; f.pos = 0; }
     f.queue.push(...files);
     f.batch += files.length;
@@ -269,7 +271,7 @@ async function processGarment(f, file) {
   if (worn) {
     f.worn = worn;
     if (worn.an.regions.length > 1) return pickStep(f);
-    return resultStep(f, canvas, { suggestCat: categoryFromSelection(worn.an, worn.sel) });
+    return resultStep(f, canvas, { suggestCat: categoryFromSelection(worn.an, worn.sel), occ: occlusion(worn.an, worn.sel) });
   }
   resultStep(f, canvas);
 }
@@ -303,7 +305,7 @@ function pickStep(f, { back = false } = {}) {
     const canvas = trimCanvas(cutSelection(w.cut, w.an, w.sel));
     if (!canvas) { toast('Dieses Teil ließ sich nicht ausschneiden', { icon: I.warning }); return; }
     haptic('light');
-    resultStep(f, canvas, { suggestCat: categoryFromSelection(w.an, w.sel) });
+    resultStep(f, canvas, { suggestCat: categoryFromSelection(w.an, w.sel), occ: occlusion(w.an, w.sel) });
   };
   f.show(el, { title: 'Welches Teil?', back, trailing: { label: 'Weiter', bold: true, onTap: go } });
   draw();
@@ -355,12 +357,14 @@ function errorStep(f, kind) {
   });
 }
 
-function resultStep(f, canvas, { raw = false, suggestCat = null } = {}) {
+function resultStep(f, canvas, { raw = false, suggestCat = null, occ = null } = {}) {
   const guessed = suggestCat || guessCategory(canvas);
   const cat = f.presetCat || guessed;
   const color = dominantColor(canvas);
   const r = f.result = { canvas, cat, color, metal: guessMetal(canvas), catTouched: !!f.presetCat, saving: false, saved: false, raw, original: canvas, ai: null, mode: 'original' };
   const canPick = !!f.worn && f.worn.an.regions.length > 1;
+  const covered = !!occ && (occ.score > 0.12 || occ.cutOff);
+  const gpt = !!f.worn || raw;
   const el = h(`<div class="scan-result">
     <div class="scan-result-stage studio${raw ? ' is-raw' : ''}">
       <div class="scan-result-art"></div>
@@ -370,6 +374,20 @@ function resultStep(f, canvas, { raw = false, suggestCat = null } = {}) {
     </div>
     <div class="scan-ai-switch" hidden></div>
     ${canPick ? `<button type="button" class="btn btn-plain btn-block scan-repick" data-a="repick">Anderes Teil wählen</button>` : ''}
+    ${gpt ? `<div class="scan-gpt${covered ? ' is-covered' : ''}">
+      <div class="scan-gpt-head"><span class="scan-gpt-icon">${I.sparkles}</span><div>
+        <div class="scan-gpt-title">${covered ? 'Teile sind verdeckt' : 'Noch schöner mit ChatGPT'}</div>
+        <div class="scan-gpt-text">${covered ? 'ChatGPT kann die fehlenden Stellen kostenlos ergänzen und ein sauberes Produktfoto machen.' : 'ChatGPT macht daraus kostenlos ein sauberes Produktfoto.'}</div>
+      </div></div>
+      <button type="button" class="btn btn-tinted btn-large btn-block" data-a="gpt">${I.share}<span>An ChatGPT senden</span></button>
+      <ol class="scan-gpt-steps" hidden>
+        <li>Im Teilen-Menü <b>ChatGPT</b> wählen.</li>
+        <li>Der Auftrag ist kopiert: ins Textfeld tippen, <b>Einfügen</b>, senden.</li>
+        <li>Fertiges Bild lange drücken → <b>Zu Fotos hinzufügen</b>.</li>
+        <li>Zurück hierher und das Bild einlesen.</li>
+      </ol>
+      <label class="btn btn-gray btn-large btn-block scan-gpt-import" hidden>${I.photo}<span>Bild von ChatGPT einlesen</span><input class="sr-only" type="file" accept="image/*" data-in="gpt" tabindex="-1"></label>
+    </div>` : ''}
     <div class="scan-ai" hidden>
       <button type="button" class="btn btn-tinted btn-large btn-block" data-a="ai">${I.sparkles}<span>Mit KI verbessern</span></button>
       <p class="scan-ai-note">Füllt verdeckte Stellen auf und macht daraus ein sauberes Produktfoto. Dafür wird das Foto an Google gesendet.</p>
@@ -419,6 +437,11 @@ function resultStep(f, canvas, { raw = false, suggestCat = null } = {}) {
   sync();
 
   const save = () => saveResult(f);
+  r.el = el; r.art = art;
+  if (gpt) {
+    r.gptPrep = prepareChatgpt(f.file, { cat: r.cat, colorName: r.color?.name, worn: !!f.worn, box: occ?.box || null }).catch((e) => { console.warn(e); return null; });
+    r.gptPrep.then((p) => { r.gptReady = p; });
+  }
   f.show(el, { title: f.batch > 1 ? queueTitle(f) : 'Passt das so?', trailing: { label: 'Sichern', bold: true, onTap: save } });
   if (!reduced()) {
     springAnimate(art, [{ opacity: 0, transform: 'scale(.82) translateY(14px)' }, { opacity: 1, transform: 'none' }], { spring: 'bouncy', delay: 120, fill: 'backwards' });
@@ -436,10 +459,11 @@ function resultStep(f, canvas, { raw = false, suggestCat = null } = {}) {
     else if (a === 'discard') { haptic('light'); next(f); }
     else if (a === 'repick') { r.abort?.abort(); pickStep(f, { back: true }); }
     else if (a === 'ai') runAI(f, el, art);
+    else if (a === 'gpt') openChatgpt(f);
   });
 
   aiAvailable().then((ok) => {
-    if (!ok || f.result !== r || !el.isConnected) return;
+    if (!ok || gpt || f.result !== r || !el.isConnected) return;
     const box = el.querySelector('.scan-ai');
     box.hidden = false;
     if (!reduced()) springAnimate(box, [{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { spring: 'smooth' });
@@ -475,12 +499,7 @@ async function runAI(f, el, art) {
     r.ai = out;
     setMode(f, el, art, 'ai');
     haptic('success');
-    const sw = el.querySelector('.scan-ai-switch');
-    if (sw.hidden) {
-      const seg = segmented({ items: [{ value: 'original', label: 'Original' }, { value: 'ai', label: 'Mit KI' }], value: 'ai', small: true, label: 'Version', onChange: (v) => setMode(f, el, art, v) });
-      sw.appendChild(seg.el);
-      sw.hidden = false;
-    }
+    ensureSwitch(f, 'Mit KI');
     el.querySelector('[data-a="ai"] span').textContent = 'Noch einmal mit KI';
   } catch (err) {
     if (err?.name === 'AbortError' || f.closed) return;
@@ -494,6 +513,73 @@ async function runAI(f, el, art) {
       btn.disabled = false;
       f.sheet.setTrailingEnabled(true);
     }
+  }
+}
+
+function ensureSwitch(f, aiLabel) {
+  const r = f.result, el = r.el, art = r.art;
+  const sw = el.querySelector('.scan-ai-switch');
+  sw.replaceChildren();
+  r.seg = segmented({ items: [{ value: 'original', label: 'Original' }, { value: 'ai', label: aiLabel }], value: 'ai', small: true, label: 'Version', onChange: (v) => setMode(f, el, art, v) });
+  sw.appendChild(r.seg.el);
+  if (sw.hidden) {
+    sw.hidden = false;
+    if (!reduced()) springAnimate(sw, [{ opacity: 0, transform: 'translateY(-4px)' }, { opacity: 1, transform: 'none' }], { spring: 'smooth' });
+  }
+}
+
+/** Foto + Auftrag an ChatGPT übergeben (Teilen-Menü). Muss direkt im Tipp passieren. */
+function openChatgpt(f) {
+  const r = f.result;
+  if (!r) return;
+  const prep = r.gptReady;
+  if (!prep) { toast('Einen Moment, das Foto wird vorbereitet …'); r.gptPrep?.then(() => {}); return; }
+  // Kategorie kann sich seit dem Vorbereiten geändert haben
+  prep.prompt = chatgptPrompt({ cat: r.cat, colorName: r.color?.name, worn: !!f.worn });
+  haptic('light');
+  const box = r.el.querySelector('.scan-gpt');
+  box.querySelector('.scan-gpt-steps').hidden = false;
+  const imp = box.querySelector('.scan-gpt-import');
+  if (imp.hidden) {
+    imp.hidden = false;
+    if (!reduced()) springAnimate(imp, [{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { spring: 'smooth', delay: 150, fill: 'backwards' });
+  }
+  sendToChatgpt(prep).then((how) => {
+    if (how === 'fallback') toast('Foto gespeichert und Auftrag kopiert', { icon: I.checkCircleFill });
+  });
+}
+
+/** Ergebnisbild von ChatGPT einlesen: freistellen und als zweite Version anbieten. */
+async function importGpt(f, file) {
+  const r = f.result;
+  if (!r || !file || r.aiBusy) return;
+  r.aiBusy = true;
+  const my = f.token;
+  const busy = r.el.querySelector('.scan-ai-busy');
+  const label = busy.querySelector('.scan-ai-busy-label span');
+  label.textContent = 'Wird ausgeschnitten …';
+  busy.hidden = false;
+  f.sheet.setTrailingEnabled(false);
+  try {
+    const cut = await removeBg(file, { maxSide: 1280 });
+    const c = trimCanvas(cut);
+    if (!c || coverage(c) < 0.04) throw new Error('Auf dem Bild war kein Teil zu erkennen.');
+    if (f.closed || my !== f.token || f.result !== r) return;
+    r.ai = c;
+    setMode(f, r.el, r.art, 'ai');
+    ensureSwitch(f, 'ChatGPT');
+    haptic('success');
+    const box = r.el.querySelector('.scan-gpt');
+    box.querySelector('.scan-gpt-steps').hidden = true;
+    box.querySelector('.scan-gpt-import span').textContent = 'Anderes Bild einlesen';
+  } catch (err) {
+    if (f.closed) return;
+    console.error(err);
+    haptic('warning');
+    toast(err?.message || 'Das Bild ließ sich nicht einlesen', { icon: I.warning });
+  } finally {
+    r.aiBusy = false;
+    if (!f.closed && f.result === r) { busy.hidden = true; f.sheet.setTrailingEnabled(true); }
   }
 }
 

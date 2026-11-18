@@ -399,3 +399,36 @@ export function renderSelection(photo, an, sel, tint = '#FF2D55') {
   }
   return c;
 }
+
+/**
+ * Wie stark ist das gewählte Teil verdeckt? Zählt Haut, Haare und andere Teile innerhalb
+ * seines Umrisses (Bounding-Box) im Verhältnis zur sichtbaren Fläche; abgeschnittene Teile zählen extra.
+ */
+export function occlusion(an, sel) {
+  const { W, H, regionMap, cat } = an;
+  let x0 = W, y0 = H, x1 = -1, y1 = -1, area = 0;
+  for (let i = 0; i < W * H; i++) {
+    if (regionMap[i] < 0 || !sel.has(regionMap[i])) continue;
+    const x = i % W, y = (i / W) | 0;
+    area++;
+    if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+  }
+  if (!area) return { score: 0, cutOff: false };
+  // innerer Bereich (Ränder der Box ausgenommen, dort liegt oft nur Hintergrund/Arm daneben)
+  const mx = Math.round((x1 - x0) * 0.08), my = Math.round((y1 - y0) * 0.04);
+  let cover = 0;
+  for (let y = y0 + my; y <= y1 - my; y++) {
+    // nur zwischen linkstem und rechtestem Pixel des Teils in dieser Zeile
+    let l = -1, r = -1;
+    for (let x = x0; x <= x1; x++) { const v = regionMap[y * W + x]; if (v >= 0 && sel.has(v)) { if (l < 0) l = x; r = x; } }
+    if (l < 0) continue;
+    for (let x = l + 1; x < r; x++) {
+      const i = y * W + x, v = regionMap[i];
+      if (v >= 0 && sel.has(v)) continue;
+      const c = cat[i];
+      if (c === C.hair || c === C.skin || c === C.face || c === C.other || (v >= 0 && !sel.has(v))) cover++;
+    }
+  }
+  const touches = x0 <= 1 || y0 <= 1 || x1 >= W - 2 || y1 >= H - 2;
+  return { score: cover / area, cutOff: touches, box: { x: x0 / W, y: y0 / H, w: (x1 - x0 + 1) / W, h: (y1 - y0 + 1) / H } };
+}

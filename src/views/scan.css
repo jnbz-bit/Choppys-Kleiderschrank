@@ -463,3 +463,31 @@
   box-shadow: 0 6px 20px rgba(0, 0, 0, .12);
 }
 .scan-ai-busy-label svg { width: 16px; height: 16px; color: var(--tint); }
+
+/* ---------- ChatGPT-Umweg ---------- */
+.scan-gpt {
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: var(--r-xl);
+  background: var(--bg-group, var(--bg-elevated));
+}
+.scan-gpt.is-covered { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 35%, transparent); }
+.scan-gpt-head { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
+.scan-gpt-icon {
+  flex-shrink: 0; width: 36px; height: 36px; border-radius: 10px;
+  display: grid; place-items: center;
+  color: var(--tint); background: var(--tint-soft);
+}
+.scan-gpt-icon svg { width: 20px; height: 20px; }
+.scan-gpt-title { font: var(--text-headline); letter-spacing: var(--track-headline); color: var(--label); }
+.scan-gpt-text { margin-top: 2px; font: var(--text-subhead); letter-spacing: var(--track-subhead); color: var(--label-2); }
+.scan-gpt .btn + .btn, .scan-gpt .scan-gpt-steps + .btn { margin-top: 10px; }
+.scan-gpt .btn svg { width: 20px; height: 20px; }
+.scan-gpt-steps {
+  margin: 14px 0 0; padding-left: 22px;
+  font: var(--text-subhead); letter-spacing: var(--track-subhead); color: var(--label-2);
+}
+.scan-gpt-steps { list-style: decimal; }
+.scan-gpt-steps li { display: list-item; margin: 4px 0; padding-left: 2px; }
+.scan-gpt-steps li::marker { color: var(--tint); font-weight: 600; }
+.scan-gpt-steps b { color: var(--label); font-weight: 600; }

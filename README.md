@@ -38,3 +38,9 @@ Service Worker aus dem Cache bedient; die App läuft danach offline.
 
 ## Auf dem iPhone installieren
 Seite in Safari öffnen → Teilen → „Zum Home-Bildschirm“. Als App bleiben die Daten dauerhaft erhalten.
+
+## KI-Aufbereitung (optional)
+
+Fotos, auf denen jemand das Teil trägt, werden auf dem iPhone erkannt (MediaPipe, `public/seg/`): Es wird nur die Kleidung ausgeschnitten, Kopf, Haut und Haare bleiben weg.
+
+Zusätzlich gibt es im Scan-Ergebnis die Taste „Mit KI verbessern“. Sie schickt das Foto an die Vercel-Funktion `api/aufbereiten.js`, die mit Google Gemini verdeckte Stellen auffüllt und ein sauberes Produktfoto erzeugt. Die Taste erscheint nur, wenn bei Vercel die Umgebungsvariable `GEMINI_API_KEY` gesetzt ist (optional `GEMINI_IMAGE_MODEL`, Standard `gemini-3.1-flash-image`).

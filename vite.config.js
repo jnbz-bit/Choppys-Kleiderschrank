@@ -26,9 +26,20 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest}'],
-        globIgnores: ['bgdata/**'],
+        globIgnores: ['bgdata/**', 'seg/**'],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
+          {
+            // Kleidungserkennung (MediaPipe): einmal laden, dann aus dem Cache
+            urlPattern: ({ url }) => url.pathname.startsWith('/seg/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'kleidungserkennung',
+              expiration: { maxEntries: 10 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          },
           {
             // Freisteller-Modell: einmal laden, dann dauerhaft aus dem Cache
             urlPattern: ({ url }) => url.pathname.startsWith('/bgdata/'),

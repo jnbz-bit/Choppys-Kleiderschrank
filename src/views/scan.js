@@ -3,13 +3,15 @@
 import './scan.css';
 import { S, addItem, select, setBody, persistSettings, urls, itemUrl } from '../app/state.js';
 import { register, go } from '../app/actions.js';
-import { sheet, h, esc, toast, haptic, springAnimate, prefersReducedMotion, setProgress, clamp, wait } from '../ui/ui.js';
+import { sheet, h, esc, toast, haptic, springAnimate, prefersReducedMotion, setProgress, clamp, wait, segmented } from '../ui/ui.js';
 import { I } from '../ui/icons.js';
 import { CATEGORIES, CAT, METALS } from '../model.js';
 import {
   removeBg, trimCanvas, coverage, dominantColor, guessMetal, guessCategory, estimateGuides, loadBitmap, canvasFrom,
   toBlob, preloadRemover
 } from '../imaging.js';
+import { analyzeWorn, defaultSelection, categoryFromSelection, regionAt, cutSelection, renderSelection, preloadSegmenter } from '../garment.js';
+import { aiAvailable, enhanceWithAI } from '../ai.js';
 
 // ---------------------------------------------------------------------------
 // Namensvorschlag („Blaues Oberteil“, „Oberteil in Pink“)
@@ -68,6 +70,7 @@ function createFlow({ title, kind }) {
       f.closed = true;
       f.token++;
       f.stopFake?.();
+      f.result?.abort?.abort();
       setTimeout(() => f.objectUrls.forEach((u) => URL.revokeObjectURL(u)), 800);
       if (active === f) active = null;
     }
@@ -166,6 +169,8 @@ function busyStep(f, { file, title, label }) {
 // ---------------------------------------------------------------------------
 function openScan(opts = {}) {
   preloadRemover();
+  preloadSegmenter();
+  aiAvailable();
   const f = createFlow({ title: 'Teil scannen', kind: 'scan' });
   Object.assign(f, { presetCat: CAT[opts?.cat] ? opts.cat : null, queue: [], batch: 0, pos: 0, busy: false, saved: [], result: null });
   f.onFiles = (files, tag) => {
@@ -192,9 +197,9 @@ function startStep(f, { back = false } = {}) {
       </div>`
       : `<div class="scan-hero"><div class="scan-hero-icon">${I.tshirt}</div>
         <h2 class="scan-hero-title">Teil scannen</h2>
-        <p class="scan-hero-text">Die App erkennt das Kleidungsstück auf dem Foto und schneidet es aus.</p></div>
+        <p class="scan-hero-text">Die App erkennt das Kleidungsstück auf dem Foto und schneidet es aus – auch wenn du es anhast.</p></div>
       <div class="scan-features">
-        <div class="feature-row">${I.photo}<div><div class="feature-title">Ruhiger Untergrund</div><div class="feature-text">Flach auf Bett, Boden oder Tisch legen und von oben fotografieren.</div></div></div>
+        <div class="feature-row">${I.photo}<div><div class="feature-title">Hingelegt oder angezogen</div><div class="feature-text">Flach auf ruhigem Untergrund von oben – oder im Spiegel an dir. Dann tippst du einfach auf das Teil.</div></div></div>
         <div class="feature-row">${I.crop}<div><div class="feature-title">Ganzes Teil im Bild</div><div class="feature-text">Mit etwas Rand. Schuhe von der Seite, Schmuck auf hellem Stoff.</div></div></div>
         <div class="feature-row">${I.sun}<div><div class="feature-title">Gutes Licht</div><div class="feature-text">Tageslicht ohne harte Schatten wirkt am besten.</div></div></div>
       </div>`}
@@ -232,12 +237,26 @@ async function processGarment(f, file) {
   f.busy = true;
   f.result = null;
   f.file = file;
+  f.worn = null;
   const ui = busyStep(f, { file, title: queueTitle(f), label: 'Wird ausgeschnitten …' });
-  let canvas = null, failed = null;
+  let canvas = null, failed = null, worn = null;
   try {
     const cut = await removeBg(file, { onProgress: ui.onProgress });
-    canvas = trimCanvas(cut);
-    if (!canvas || coverage(canvas) < 0.04) failed = 'none';
+    // Trägt jemand das Teil? Dann nur die Kleidung nehmen – ohne Kopf, Arme, Beine.
+    try {
+      const photo = canvasFrom(await loadBitmap(file), 1280);
+      if (photo.width === cut.width && photo.height === cut.height) {
+        const an = await analyzeWorn(photo);
+        if (an) worn = { an, photo, cut, sel: defaultSelection(an, f.presetCat) };
+      }
+    } catch (err) { console.warn('Kleidungserkennung nicht verfügbar', err); }
+    if (worn) {
+      canvas = trimCanvas(cutSelection(worn.cut, worn.an, worn.sel));
+      if (!canvas || coverage(canvas) < 0.04) failed = worn.an.regions.length > 1 ? null : 'none';
+    } else {
+      canvas = trimCanvas(cut);
+      if (!canvas || coverage(canvas) < 0.04) failed = 'none';
+    }
   } catch (err) {
     console.error(err);
     failed = 'error';
@@ -247,7 +266,58 @@ async function processGarment(f, file) {
   if (failed) return errorStep(f, failed);
   await ui.done();
   if (f.closed || my !== f.token) return;
+  if (worn) {
+    f.worn = worn;
+    if (worn.an.regions.length > 1) return pickStep(f);
+    return resultStep(f, canvas, { suggestCat: categoryFromSelection(worn.an, worn.sel) });
+  }
   resultStep(f, canvas);
+}
+
+// ---------------------------------------------------------------------------
+// Teil wählen (Foto mit Person: mehrere Kleidungsstücke erkannt)
+// ---------------------------------------------------------------------------
+function pickStep(f, { back = false } = {}) {
+  const w = f.worn;
+  const tint = getComputedStyle(document.documentElement).getPropertyValue('--tint').trim() || '#FF2D55';
+  const el = h(`<div class="scan-pick">
+    <p class="scan-pick-text">Tippe auf das Teil, das du sichern willst. Du kannst auch mehrere zusammen wählen.</p>
+    <div class="scan-pick-media"></div>
+    <div class="scan-bottom">
+      <button type="button" class="btn btn-filled btn-large btn-block" data-a="go"><span>Weiter</span></button>
+    </div>
+  </div>`);
+  const media = el.querySelector('.scan-pick-media');
+  let view = null;
+  const draw = () => {
+    const c = renderSelection(w.photo, w.an, w.sel, tint);
+    c.className = 'scan-pick-canvas';
+    if (view) view.replaceWith(c); else media.appendChild(c);
+    view = c;
+    const btn = el.querySelector('[data-a="go"]');
+    btn.disabled = !w.sel.size;
+    f.sheet.setTrailingEnabled?.(!!w.sel.size);
+  };
+  const go = () => {
+    if (!w.sel.size) return;
+    const canvas = trimCanvas(cutSelection(w.cut, w.an, w.sel));
+    if (!canvas) { toast('Dieses Teil ließ sich nicht ausschneiden', { icon: I.warning }); return; }
+    haptic('light');
+    resultStep(f, canvas, { suggestCat: categoryFromSelection(w.an, w.sel) });
+  };
+  f.show(el, { title: 'Welches Teil?', back, trailing: { label: 'Weiter', bold: true, onTap: go } });
+  draw();
+  media.addEventListener('click', (e) => {
+    const rect = view.getBoundingClientRect();
+    const fx = (e.clientX - rect.left) / rect.width, fy = (e.clientY - rect.top) / rect.height;
+    if (fx < 0 || fy < 0 || fx > 1 || fy > 1) return;
+    const r = regionAt(w.an, fx, fy);
+    if (r < 0) { haptic('warning'); return; }
+    if (w.sel.has(r)) w.sel.delete(r); else w.sel.add(r);
+    haptic('selection');
+    draw();
+  });
+  el.querySelector('[data-a="go"]').addEventListener('click', go);
 }
 
 function errorStep(f, kind) {
@@ -285,16 +355,24 @@ function errorStep(f, kind) {
   });
 }
 
-function resultStep(f, canvas, { raw = false } = {}) {
-  const guessed = guessCategory(canvas);
+function resultStep(f, canvas, { raw = false, suggestCat = null } = {}) {
+  const guessed = suggestCat || guessCategory(canvas);
   const cat = f.presetCat || guessed;
   const color = dominantColor(canvas);
-  const r = f.result = { canvas, cat, color, metal: guessMetal(canvas), catTouched: !!f.presetCat, saving: false, saved: false, raw };
+  const r = f.result = { canvas, cat, color, metal: guessMetal(canvas), catTouched: !!f.presetCat, saving: false, saved: false, raw, original: canvas, ai: null, mode: 'original' };
+  const canPick = !!f.worn && f.worn.an.regions.length > 1;
   const el = h(`<div class="scan-result">
     <div class="scan-result-stage studio${raw ? ' is-raw' : ''}">
       <div class="scan-result-art"></div>
       <div class="studio-floor scan-result-floor"></div>
       <button type="button" class="icon-btn is-small scan-rotate" aria-label="Drehen">${I.rotate}</button>
+      <div class="scan-ai-busy" aria-live="polite" hidden><div class="scan-shimmer"></div><span class="scan-ai-busy-label">${I.sparkles}<span>KI bereitet auf …</span></span></div>
+    </div>
+    <div class="scan-ai-switch" hidden></div>
+    ${canPick ? `<button type="button" class="btn btn-plain btn-block scan-repick" data-a="repick">Anderes Teil wählen</button>` : ''}
+    <div class="scan-ai" hidden>
+      <button type="button" class="btn btn-tinted btn-large btn-block" data-a="ai">${I.sparkles}<span>Mit KI verbessern</span></button>
+      <p class="scan-ai-note">Füllt verdeckte Stellen auf und macht daraus ein sauberes Produktfoto. Dafür wird das Foto an Google gesendet.</p>
     </div>
     <div class="scan-field">
       <div class="list-header">Was ist es?</div>
@@ -356,7 +434,78 @@ function resultStep(f, canvas, { raw = false } = {}) {
     const a = e.target.closest('[data-a]')?.dataset.a;
     if (a === 'save') save();
     else if (a === 'discard') { haptic('light'); next(f); }
+    else if (a === 'repick') { r.abort?.abort(); pickStep(f, { back: true }); }
+    else if (a === 'ai') runAI(f, el, art);
   });
+
+  aiAvailable().then((ok) => {
+    if (!ok || f.result !== r || !el.isConnected) return;
+    const box = el.querySelector('.scan-ai');
+    box.hidden = false;
+    if (!reduced()) springAnimate(box, [{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { spring: 'smooth' });
+  });
+}
+
+function showCanvas(art, c) {
+  const old = art.querySelector('canvas');
+  c.classList.add('scan-result-canvas');
+  if (old) old.replaceWith(c); else art.appendChild(c);
+}
+
+async function runAI(f, el, art) {
+  const r = f.result;
+  if (!r || r.aiBusy || r.saving) return;
+  r.aiBusy = true;
+  const my = f.token;
+  const btn = el.querySelector('[data-a="ai"]');
+  const busy = el.querySelector('.scan-ai-busy');
+  const label = busy.querySelector('.scan-ai-busy-label span');
+  btn.disabled = true;
+  busy.hidden = false;
+  f.sheet.setTrailingEnabled(false);
+  haptic('light');
+  r.abort = new AbortController();
+  const phases = { upload: 'Foto wird gesendet …', ai: 'KI bereitet auf …', cut: 'Wird ausgeschnitten …' };
+  try {
+    const out = await enhanceWithAI(f.file, r.raw ? null : r.original, {
+      cat: r.cat, colorName: r.color?.name, worn: !!f.worn, signal: r.abort.signal,
+      onPhase: (p) => { if (label) label.textContent = phases[p] || ''; }
+    });
+    if (f.closed || my !== f.token || f.result !== r) return;
+    r.ai = out;
+    setMode(f, el, art, 'ai');
+    haptic('success');
+    const sw = el.querySelector('.scan-ai-switch');
+    if (sw.hidden) {
+      const seg = segmented({ items: [{ value: 'original', label: 'Original' }, { value: 'ai', label: 'Mit KI' }], value: 'ai', small: true, label: 'Version', onChange: (v) => setMode(f, el, art, v) });
+      sw.appendChild(seg.el);
+      sw.hidden = false;
+    }
+    el.querySelector('[data-a="ai"] span').textContent = 'Noch einmal mit KI';
+  } catch (err) {
+    if (err?.name === 'AbortError' || f.closed) return;
+    console.error(err);
+    haptic('warning');
+    toast(err?.message || 'Die KI-Aufbereitung hat nicht geklappt', { icon: I.warning });
+  } finally {
+    r.aiBusy = false;
+    if (!f.closed && f.result === r) {
+      busy.hidden = true;
+      btn.disabled = false;
+      f.sheet.setTrailingEnabled(true);
+    }
+  }
+}
+
+function setMode(f, el, art, mode) {
+  const r = f.result;
+  const c = mode === 'ai' ? r.ai : r.original;
+  if (!c || r.mode === mode && r.canvas === c) return;
+  r.mode = mode;
+  r.canvas = c;
+  showCanvas(art, c);
+  el.querySelector('.scan-result-stage').classList.toggle('is-raw', mode === 'original' && r.raw);
+  if (!reduced()) springAnimate(c, [{ opacity: 0, transform: 'scale(.94)' }, { opacity: 1, transform: 'none' }], { spring: 'smooth' });
 }
 
 async function rotate(f, art, sync) {
@@ -380,6 +529,7 @@ async function rotate(f, art, sync) {
   }
   src.replaceWith(c);
   r.canvas = c;
+  if (r.mode === 'ai') r.ai = c; else r.original = c;
   if (!r.catTouched) r.cat = f.presetCat || guessCategory(c);
   sync();
   r.rotating = false;
@@ -387,7 +537,7 @@ async function rotate(f, art, sync) {
 
 async function saveResult(f) {
   const r = f.result;
-  if (!r || r.saving || r.saved || f.closed) return;
+  if (!r || r.saving || r.saved || r.aiBusy || f.closed) return;
   r.saving = true;
   const my = f.token;
   f.sheet.setTrailingEnabled(false);

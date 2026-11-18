@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@imgly/background-removal": "^1.4.5",
+    "@mediapipe/tasks-vision": "^1.2.3",
     "idb-keyval": "^6.3.0"
   },
   "devDependencies": {

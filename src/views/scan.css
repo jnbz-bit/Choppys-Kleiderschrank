@@ -395,3 +395,71 @@
   .scan-busy-media { height: 38vh; }
   .scan-result-stage { height: 32vh; min-height: 180px; }
 }
+
+/* ---------- Teil wählen (Foto mit Person) ---------- */
+.scan-pick { display: flex; flex-direction: column; min-height: 100%; }
+.scan-pick-text {
+  margin: 4px 8px 14px;
+  font: var(--text-subhead);
+  letter-spacing: var(--track-subhead);
+  color: var(--label-2);
+  text-align: center;
+}
+.scan-pick-media {
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  background: #000;
+  cursor: pointer;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+.scan-pick-canvas {
+  display: block;
+  max-width: 100%;
+  max-height: min(56vh, 520px);
+  width: auto;
+  height: auto;
+}
+.scan-pick .scan-bottom { margin-top: auto; padding-top: 18px; }
+
+/* ---------- KI-Aufbereitung ---------- */
+.scan-repick { margin-top: 6px; }
+.scan-ai { margin-top: 14px; }
+.scan-ai .btn svg { width: 20px; height: 20px; }
+.scan-ai-note {
+  margin: 8px 12px 0;
+  font: var(--text-footnote);
+  letter-spacing: var(--track-footnote);
+  color: var(--label-2);
+  text-align: center;
+}
+.scan-ai-switch { display: flex; justify-content: center; margin-top: 12px; }
+.scan-ai-switch .segmented { width: min(260px, 100%); }
+.scan-ai-busy {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: end center;
+  padding-bottom: 16px;
+  background: color-mix(in srgb, var(--bg-elevated) 35%, transparent);
+  -webkit-backdrop-filter: blur(3px) saturate(120%);
+  backdrop-filter: blur(3px) saturate(120%);
+}
+.scan-ai-busy[hidden] { display: none; }
+.scan-ai-busy-label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font: var(--text-subhead);
+  font-weight: 600;
+  color: var(--label);
+  background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .12);
+}
+.scan-ai-busy-label svg { width: 16px; height: 16px; color: var(--tint); }
